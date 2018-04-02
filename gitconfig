@@ -1,0 +1,21 @@
+[include]
+        path = ~/.gitconfig-user
+
+[color]
+	diff = auto
+	status = auto
+	branch = auto
+	ui = auto
+
+[alias]
+	lg = log --oneline --graph --all --decorate --abbrev-commit
+
+[branch]
+	autosetuprebase = always
+[log]
+	decorate = true
+        mailmap = true
+
+[hub]
+protocol = https
+
