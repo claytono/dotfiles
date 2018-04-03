@@ -3,6 +3,7 @@ tap "caskroom/versions"
 tap "caskroom/cask"
 
 brew "bash-completion"
+brew "coreutils"
 brew "git"
 brew "git-crypt"
 brew "go"
