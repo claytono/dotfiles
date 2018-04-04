@@ -4,6 +4,7 @@ tap "caskroom/cask"
 
 brew "bash-completion"
 brew "coreutils"
+brew "findutils", args: ["with-default-names"]
 brew "git"
 brew "git-crypt"
 brew "go"
@@ -23,6 +24,7 @@ brew "xz"
 
 cask "caskroom/versions/docker-edge"
 cask "borgbackup"
+cask "skype"
 cask "vagrant"
 cask "virtualbox"
 cask "virtualbox-extension-pack"
