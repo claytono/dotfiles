@@ -24,6 +24,7 @@ brew "xz"
 
 cask "caskroom/versions/docker-edge"
 cask "borgbackup"
+cask "java"
 cask "skype"
 cask "vagrant"
 cask "virtualbox"
