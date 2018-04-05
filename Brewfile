@@ -22,6 +22,9 @@ brew "watch"
 brew "wget"
 brew "xz"
 
+# Acrobat reader is horrible, but at some point Preview.app started sucking at
+# filling forms.
+cask "adobe-acrobat-reader"
 cask "caskroom/versions/docker-edge"
 cask "borgbackup"
 cask "java"
