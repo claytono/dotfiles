@@ -45,6 +45,10 @@ if [ $MACOS ]; then
   fi
 fi
 
+if command_exists hub; then
+    alias git=hub
+fi
+
 # check if this is a login and/or interactive shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
 echo "$-" | grep -q "i" && export INTERACTIVE_BASH="1"

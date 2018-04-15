@@ -9,6 +9,7 @@ brew "findutils", args: ["with-default-names"]
 brew "git"
 brew "git-crypt"
 brew "go"
+brew "hub"
 brew "jq"
 brew "kubectx"
 brew "kubernetes-cli"
