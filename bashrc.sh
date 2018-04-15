@@ -33,10 +33,10 @@ export HISTIGNORE="&:[ ]*:exit:ls:bg:fg:history:clear"
 HISTTIMEFORMAT='%F %T '
 
 # pc_ = promptcolor_
-pc_lgreen=$(tput setaf 10)
-pc_lblue=$(tput setaf 12)
-pc_lred=$(tput setaf 9)
-pc_reset=$(tput sgr0)
+pc_lgreen="\[$(tput setaf 10)\]"
+pc_lblue="\[$(tput setaf 12)\]"
+pc_lred="\[$(tput setaf 9)\]"
+pc_reset="\[$(tput sgr0)\]"
 
 p_user() {
     if [[ $USER != "coneill" && $USER != "claytono " ]]; then
