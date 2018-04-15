@@ -49,3 +49,15 @@ cask "caskroom/fonts/font-hack-nerd-font"
 cask "caskroom/fonts/font-inconsolata"
 cask "caskroom/fonts/font-inconsolata-nerd-font"
 cask "caskroom/fonts/font-inconsolata-nerd-font-mono"
+
+brew "mas"
+mas "Alternote", id: 974971992
+mas "Deliveries", id: 924726344
+mas "Keynote", id: 409183694
+mas "Numbers", id: 409203825
+mas "Pages", id: 409201541
+mas "Pixelmator", id: 407963104
+mas "Reeder", id: 880001334
+mas "SnoozeMaster", id: 614955483
+mas "Tweetbot", id: 557168941
+mas "YubiKey Personalization Tool", id: 638161122
