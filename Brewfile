@@ -29,6 +29,7 @@ brew "xz"
 # filling forms.
 cask "adobe-acrobat-reader"
 cask "alfred"
+cask "bartender"
 cask "caskroom/versions/docker-edge"
 cask "borgbackup"
 cask "dropbox"
