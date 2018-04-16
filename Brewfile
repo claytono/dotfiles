@@ -5,6 +5,7 @@ tap "caskroom/cask"
 brew "bash"
 brew "bash-completion"
 brew "coreutils"
+brew "fd"
 brew "findutils", args: ["with-default-names"]
 brew "git"
 brew "git-crypt"
