@@ -1,6 +1,7 @@
 tap "caskroom/fonts"
 tap "caskroom/versions"
 tap "caskroom/cask"
+tap "homebrew/services"
 
 brew "bash"
 brew "bash-completion"
