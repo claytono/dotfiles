@@ -23,7 +23,6 @@ if [ -x $AIRPORTCMD ]; then
   alias airport=$AIRPORTCMD
 fi
 
-
 export GOPATH=$HOME/src/go
 pathmunge $GOPATH/bin
 pathmunge /usr/local/sbin
@@ -53,6 +52,8 @@ if command_exists vim; then
     export EDITOR=$(type -p vim)
     export GIT_EDITOR=$EDITOR
 fi
+
+alias "kt=watch kubectl get nodes,pods,pvc --all-namespaces -a -o wide"
 
 # check if this is a login and/or interactive shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
