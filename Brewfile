@@ -2,9 +2,11 @@ tap "caskroom/fonts"
 tap "caskroom/versions"
 tap "caskroom/cask"
 tap "homebrew/services"
+tap "claytono/extras"
 
 brew "bash"
 brew "bash-completion"
+brew "claytono/extras/borgmatic"
 brew "coreutils"
 brew "fd"
 brew "findutils", args: ["with-default-names"]
