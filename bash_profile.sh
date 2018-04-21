@@ -53,6 +53,10 @@ if command_exists vim; then
     export GIT_EDITOR=$EDITOR
 fi
 
+if command_exists rbenv; then
+    eval "$(rbenv init -)"
+fi
+
 alias "kt=watch kubectl get nodes,pods,pvc --all-namespaces -a -o wide"
 
 # check if this is a login and/or interactive shell
