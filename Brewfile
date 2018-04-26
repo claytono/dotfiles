@@ -31,6 +31,7 @@ brew "vim"
 brew "watch"
 brew "wget"
 brew "xz"
+brew "zstd"
 
 # Acrobat reader is horrible, but at some point Preview.app started sucking at
 # filling forms.
