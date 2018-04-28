@@ -1,5 +1,10 @@
-[include]
-        path = ~/.gitconfig-user
+[user]
+	name = Clayton O'Neill
+	email = claytono@github.com
+	signingKey = clayton@oneill.net
+
+[commit]
+	gpgSign = true
 
 [color]
 	diff = auto

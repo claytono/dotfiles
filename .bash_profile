@@ -58,6 +58,7 @@ if command_exists rbenv; then
 fi
 
 alias "kt=watch kubectl get nodes,pods,pvc --all-namespaces -a -o wide"
+alias "dg=git --git-dir=$HOME/.dotfiles --work-tree=$HOME"
 
 # check if this is a login and/or interactive shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
