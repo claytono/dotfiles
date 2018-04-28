@@ -3,7 +3,8 @@ def is_virtualized?
 end
 
 def mas_signed_in?
-  `mas account` !~ /Not signed in/
+  %x(mas account) !~ /Not signed in/
+  rescue
 end
 
 tap "caskroom/fonts"
