@@ -4,6 +4,7 @@ tap "caskroom/cask"
 tap "homebrew/services"
 tap "claytono/extras"
 
+brew "ansible"
 brew "bash"
 brew "bash-completion"
 brew "claytono/extras/borgmatic"
