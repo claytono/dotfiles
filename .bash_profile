@@ -33,7 +33,9 @@ if [ -d "$VSCODE_BINDIR" ]; then
   pathmunge "$VSCODE_BINDIR" after
 fi
 
-source $(brew --prefix)/etc/bash_completion
+if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
+  source $(brew --prefix)/etc/bash_completion
+fi
 
 if [ $MACOS ]; then
   export CLICOLOR=1
