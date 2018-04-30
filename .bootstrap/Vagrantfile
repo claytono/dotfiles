@@ -2,10 +2,27 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "monsenso/macos-10.13"
-  config.vm.box_version = "1.0.0"
-  #config.vm.synced_folder ".", "/vagrant", type: "rsync"
+  config.vm.provision "prep",
+    type: "shell",
+    inline: "/bin/true"
+
+  config.vm.define "macos" do |macos|
+    macos.vm.box = "monsenso/macos-10.13"
+  end
+
+  config.vm.define "debian" do |debian|
+    debian.vm.box = "debian/stretch64"
+    debian.vm.provision "prep", type: "shell", privileged: true,
+      preserve_order: true,
+      inline: "apt-get update; apt-get install git curl -y"
+  end
+
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision :shell, privileged: false,
-    inline: "curl -L https://raw.githubusercontent.com/claytono/dotfiles/master/.bootstrap/bootstrap.sh | bash"
+  if ENV["LOCAL_TEST"]
+    config.vm.provision "bootstrap", type: "shell", privileged: false,
+      path: "bootstrap.sh"
+  else
+    config.vm.provision "bootstrap", type: "shell", privileged: false,
+      inline: "set -o pipefail; curl -L https://raw.githubusercontent.com/claytono/dotfiles/master/.bootstrap/bootstrap.sh | bash"
+  end
 end
