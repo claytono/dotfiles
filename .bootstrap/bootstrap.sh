@@ -25,6 +25,12 @@ if [[ -n "$UNIX" ]]; then
 fi
 
 
+if [[ -n "$MACOS" ]]; then
+  # Install Homebrew
+  curl -vL https://raw.githubusercontent.com/Homebrew/install/master/install >/tmp/homebrew-install
+  ruby /tmp/homebrew-install
+fi
+
 if [[ ! -d ~/.dotfiles/.git ]]; then
     rm -rf ~/.dotfiles
     git clone --bare https://github.com/claytono/dotfiles.git ~/.dotfiles
@@ -37,8 +43,5 @@ cfg checkout -f
 cfg config --local status.showUntrackedFiles no
 
 if [[ -n "$MACOS" ]]; then
-  # Install Homebrew
-  curl -vL https://raw.githubusercontent.com/Homebrew/install/master/install >/tmp/homebrew-install
-  ruby /tmp/homebrew-install
   brew bundle --global
 fi
