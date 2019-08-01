@@ -59,7 +59,7 @@ if command_exists rbenv; then
     eval "$(rbenv init -)"
 fi
 
-alias "kt=watch kubectl get nodes,pods,pvc --all-namespaces -a -o wide"
+alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
 alias "cfg=git --git-dir=$HOME/.dotfiles --work-tree=$HOME"
 
 # check if this is a login and/or interactive shell
