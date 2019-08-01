@@ -1,3 +1,5 @@
+require 'socket'
+
 def is_virtualized?
   `ioreg -l|grep -i board-id` =~ /Virtualbox/i
 end
@@ -5,6 +7,14 @@ end
 def mas_signed_in?
   %x(mas account) !~ /Not signed in/
   rescue
+end
+
+def hostname
+  Socket.gethostname
+end
+
+def hajnal?
+  hostname == 'hajnal'
 end
 
 tap "caskroom/fonts"
@@ -25,7 +35,7 @@ brew "coreutils"
 brew "dep"
 brew "docker"
 brew "fd"
-brew "findutils", args: ["with-default-names"]
+brew "findutils"
 brew "fzf"
 brew "ghi"
 brew "git"
@@ -69,7 +79,7 @@ brew "zstd"
 # filling forms.
 cask "adobe-acrobat-reader"
 # For infinity thermostat control
-cask "adobe-air"
+cask "adobe-air" if hajnal?
 cask "alfred"
 cask "anki"
 cask "bartender"
