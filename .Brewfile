@@ -1,3 +1,6 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 require 'socket'
 
 def is_virtualized?
@@ -77,13 +80,8 @@ brew "zstd"
 
 # Acrobat reader is horrible, but at some point Preview.app started sucking at
 # filling forms.
-cask "adobe-acrobat-reader"
-# For infinity thermostat control
-cask "adobe-air" if hajnal?
 cask "alfred"
-cask "anki"
 cask "bartender"
-cask "bitbar"
 cask "borgbackup"
 cask "dropbox"
 cask "evernote"
@@ -91,20 +89,27 @@ cask "franz"
 cask "google-backup-and-sync"
 cask "iina"
 cask "iterm2"
-cask "java8"
 cask "karabiner-elements"
 cask "kindle"
-cask "logitech-myharmony"
 cask "macmediakeyforwarder"
-cask "mailplane"
-cask "mqttfx"
-cask "omnigraffle"
 cask "rocket"
 cask "spotify"
 cask "vagrant"
 cask "viscosity"
 cask "visual-studio-code"
 cask "wireshark"
+
+if hajnal?
+  cask "adobe-acrobat-reader"
+  # For infinity thermostat control
+  cask "adobe-air" if hajnal?
+  cask "anki"
+  cask "bitbar"
+  cask "logitech-myharmony"
+  cask "mailplane"
+  cask "mqttfx"
+  cask "omnigraffle"
+end
 
 unless is_virtualized?
   cask "virtualbox"
