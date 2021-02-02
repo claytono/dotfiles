@@ -33,8 +33,10 @@ if [ -d "$VSCODE_BINDIR" ]; then
   pathmunge "$VSCODE_BINDIR" after
 fi
 
-if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
-  source $(brew --prefix)/etc/bash_completion
+if command_exists brew; then
+  if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
+    source $(brew --prefix)/etc/bash_completion
+  fi
 fi
 
 if [ $MACOS ]; then
