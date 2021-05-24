@@ -72,3 +72,5 @@ echo "$-" | grep -q "i" && export INTERACTIVE_BASH="1"
 if [ -n "$LOGIN_BASH" ] && [ -n "$INTERACTIVE_BASH" ]; then
   source ~/.bashrc
 fi
+
+export PATH="$HOME/.cargo/bin:$PATH"
