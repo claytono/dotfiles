@@ -54,7 +54,5 @@ prompt_command() {
 PROMPT_DIRTRIM=3
 PROMPT_COMMAND=prompt_command
 
-# added by travis gem
-[ -f /Users/coneill/.travis/travis.sh ] && source /Users/coneill/.travis/travis.sh
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
