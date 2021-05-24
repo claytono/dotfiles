@@ -54,5 +54,7 @@ prompt_command() {
 PROMPT_DIRTRIM=3
 PROMPT_COMMAND=prompt_command
 
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
