@@ -61,6 +61,11 @@ if command_exists rbenv; then
     eval "$(rbenv init -)"
 fi
 
+if command_exists pyenv; then
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+fi
+
 alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
 alias "cfg=git --git-dir=$HOME/.dotfiles --work-tree=$HOME"
 
