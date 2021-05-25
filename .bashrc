@@ -58,3 +58,7 @@ eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
+if [ -f ~/.ssh/github.id_rsa ]; then
+  ssh-add -q ~/.ssh/github.id_rsa
+fi
