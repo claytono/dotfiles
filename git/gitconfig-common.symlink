@@ -1,0 +1,35 @@
+[user]
+	name = Clayton O'Neill
+	email = clayton@oneill.net
+	signingKey = clayton@oneill.net
+
+[color]
+	diff = auto
+	status = auto
+	branch = auto
+	ui = auto
+
+[alias]
+	lg = log --oneline --graph --all --decorate --abbrev-commit
+
+[core]
+	# Exclude everything this file. Used for general exclusions.
+	excludesfile = ~/.gitignore
+
+[branch]
+	autosetuprebase = always
+[log]
+	decorate = true
+        mailmap = true
+
+[hub]
+protocol = https
+
+[github]
+	user = claytono
+[protocol]
+	version = 2
+[push]
+	default = simple
+[init]
+	defaultBranch = main
