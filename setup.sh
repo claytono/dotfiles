@@ -3,9 +3,10 @@
 set -e -o pipefail
 
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SUPPORTED_OS="linux macos"
 
-[ "$(uname -s)" = "Darwin" ] && export MACOS=1 && export UNIX=1
-[ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1
+[ "$(uname -s)" = "Darwin" ] && export MACOS=1 && export UNIX=1 && export OS=macos
+[ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1 && export OS=linux
 
 command_exists () {
     type "$1" &> /dev/null ;
@@ -32,22 +33,37 @@ if [[ -n "$MACOS" ]]; then
     rm -f /tmp/homebrew-install
   fi
 
-  brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
+  #brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
 fi
 
 # Based on: https://github.com/skalnik/dotfiles/blob/6f1d812ce8d68a541173c1f6f81f640ad9d8840a/install.sh
 # Link all linkable files
 for linkable in "$BASEDIR"/**/*.symlink*; do
   target=$HOME"/."$(basename "$linkable" | sed 's/\.symlink.*//')
+  os_match="true"
+  for os in $SUPPORTED_OS; do
+    if [[ $target == *.${os} ]]; then
+      if [[ $os == "$OS" ]]; then
+        target=$(echo $target|sed "s/\.${OS}//")
+      else
+        os_match="false"
+      fi
+    fi
+  done
+
+  if [[ $os_match == "false" ]]; then
+    continue
+  fi
+
   if [ ! -e "$target" ]; then
-    echo "🔗 Linking $target → $linkable."
+    echo "🔗 Linking $target → $linkable"
   else
-    echo "🔗 Replacing $target → $linkable."
+    echo "🔗 Replacing $target → $linkable"
   fi
   ln -Ff -s "$linkable" "$target"
 done
 
 for executable in "$BASEDIR"/**/install.sh; do
-  echo "👟 Running $executable."
+  echo "👟 Running $executable"
   bash "$executable"
 done
