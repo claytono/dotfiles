@@ -25,7 +25,7 @@ if [[ -n "$UNIX" ]]; then
   fi
 fi
 
-if [[ -n "$MACOS" ]]; then
+if [[ -n "$MACOS" && -z "$SKIP_HOMEBREW" ]]; then
   if ! command_exists brew; then
     # Install Homebrew
     curl -vL https://raw.githubusercontent.com/Homebrew/install/master/install >/tmp/homebrew-install
