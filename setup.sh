@@ -38,7 +38,7 @@ fi
 # Based on: https://github.com/skalnik/dotfiles/blob/6f1d812ce8d68a541173c1f6f81f640ad9d8840a/install.sh
 # Link all linkable files
 for linkable in "$BASEDIR"/**/*.symlink*; do
-  target=$HOME"/."$(basename "$linkable" | sed 's/\.symlink\..*//')
+  target=$HOME"/."$(basename "$linkable" | sed 's/\.symlink.*//')
   if [ ! -e "$target" ]; then
     echo "🔗 Linking $target → $linkable."
   else
