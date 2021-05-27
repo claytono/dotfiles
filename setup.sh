@@ -33,7 +33,7 @@ if [[ -n "$MACOS" ]]; then
     rm -f /tmp/homebrew-install
   fi
 
-  #brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
+  brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
 fi
 
 # Based on: https://github.com/skalnik/dotfiles/blob/6f1d812ce8d68a541173c1f6f81f640ad9d8840a/install.sh
