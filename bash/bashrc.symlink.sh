@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+
 # check if this is a login shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
 
@@ -40,7 +42,7 @@ pc_reset="\[$(tput sgr0)\]"
 
 p_user() {
     if [[ $USER != "coneill" && $USER != "claytono " ]]; then
-      echo "\u@"
+      echo "${pc_lred}\u${pc_reset}@"
     fi
 }
 

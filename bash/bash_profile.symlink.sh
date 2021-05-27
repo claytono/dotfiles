@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+
 # OS variables
 [ "$(uname -s)" = "Darwin" ] && export MACOS=1 && export UNIX=1
 [ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1
@@ -67,7 +69,6 @@ if command_exists pyenv; then
 fi
 
 alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
-alias "cfg=git --git-dir=$HOME/.dotfiles --work-tree=$HOME"
 
 # check if this is a login and/or interactive shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
