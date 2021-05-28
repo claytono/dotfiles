@@ -3,6 +3,14 @@
 
 require 'socket'
 
+def macos?
+  RUBY_PLATFORM =~ /darwin/
+end
+
+def linux?
+  RUBY_PLATFORM =~ /linux/
+end
+
 def is_virtualized?
   `ioreg -l|grep -i board-id` =~ /Virtualbox/i
 end
@@ -20,142 +28,147 @@ def hajnal?
   hostname == 'hajnal'
 end
 
-tap "caskroom/fonts"
-tap "homebrew/services"
-tap "homebrew/cask"
-tap "homebrew/cask-drivers"
-tap "hmarr/tap"
-tap "claytono/extras"
-tap "heroku/brew"
+if macos?
+  tap "caskroom/fonts"
+  tap "homebrew/services"
+  tap "homebrew/cask"
+  tap "homebrew/cask-drivers"
+  tap "hmarr/tap"
+  tap "claytono/extras"
+  tap "heroku/brew"
 
-tap "github/bootstrap"
-tap "github/packages"
+  tap "github/bootstrap"
+  tap "github/packages"
+end
 
-brew "ansible"
 brew "atool"
-brew "autossh"
-brew "awscli"
-brew "azure-cli"
-brew "bash"
-brew "bash-completion"
-brew "borgbackup"
-brew "borgmatic"
-brew "borgmatic-runner"
-brew "terminal-notifier" # Needed by borgmatic-runner, but brew bundle doesn't detect it.
 brew "calc"
-brew "codeowners"
-brew "coreutils"
-brew "curl"
-brew "dep"
 brew "fd"
-brew "findutils"
 brew "fzf"
-brew "ghi"
 brew "git"
 brew "git-crypt"
-brew "go"
-brew "gomplate"
-brew "graphviz"
-brew "hping"
 brew "htop"
 brew "jq"
 brew "k9s"
-brew "kubectx"
 brew "kubernetes-cli"
 brew "lftp"
-brew "node"
-brew "mpv"
 brew "mtr"
 brew "nmap"
 brew "p7zip"
 brew "prettyping"
-brew "pstree"
-brew "pyenv"
-brew "pyenv-virtualenv"
-brew "rbenv"
-brew "rbenv-default-gems"
-brew "rustup-init"
 brew "rclone"
-brew "reattach-to-user-namespace"
 brew "ripgrep"
-brew "sf-pwgen"
-brew "shellcheck"
 brew "socat"
-brew "switchaudio-osx"
-brew "telnet"
-brew "terraform"
 brew "tmux"
-brew "unrar"
 brew "vim"
-brew "watch"
 brew "wget"
 brew "xz"
 
-# GH
-brew "awssume"
-brew "gh"
+if macos?
+  brew "ansible"
+  brew "autossh"
+  brew "awscli"
+  brew "azure-cli"
+  brew "bash"
+  brew "bash-completion"
+  brew "borgbackup"
+  brew "borgmatic"
+  brew "borgmatic-runner"
+  brew "codeowners"
+  brew "coreutils"
+  brew "curl"
+  brew "findutils"
+  brew "go"
+  brew "gomplate"
+  brew "graphviz"
+  brew "hping"
+  brew "node"
+  brew "mpv"
+  brew "pstree"
+  brew "pyenv"
+  brew "pyenv-virtualenv"
+  brew "rbenv"
+  brew "rbenv-default-gems"
+  brew "rustup-init"
+  brew "reattach-to-user-namespace"
+  brew "sf-pwgen"
+  brew "shellcheck"
+  brew "switchaudio-osx"
+  brew "telnet"
+  brew "terraform"
+  brew "terminal-notifier" # Needed by borgmatic-runner, but brew bundle doesn't detect it.
+  brew "unrar"
+  brew "watch"
 
-cask "alfred"
-cask "balenaetcher"
-cask "bartender"
-cask "borgbackup"
-cask "carbon-copy-cloner"
-cask "disk-inventory-x"
-cask "docker"
-cask "dropbox"
-cask "evernote"
-cask "franz"
-cask "iina"
-cask "iterm2"
-cask "karabiner-elements"
-cask "kindle"
-cask "macdown"
-cask "macmediakeyforwarder"
-cask "platypus"
-cask "rocket"
-cask "spotify"
-cask "vagrant"
-cask "viscosity"
-cask "visual-studio-code"
-cask "vlc"
-cask "wireshark"
-
-# 3dprinting
-cask "ultimaker-cura"
-cask "openscad"
-
-if hajnal?
-  # Acrobat reader is horrible, but at some point Preview.app started sucking at
-  # filling forms.
-  cask "adobe-acrobat-reader"
-  # For infinity thermostat control
-  cask "anki"
-  cask "bitbar"
-  cask "brave-browser"
-  cask "discord"
-  cask "mailplane"
-  cask "microsoft-teams"
-  cask "mqttfx"
-  cask "omnigraffle"
-  cask "paw"
-  cask "plantronics-hub"
-  cask "sony-ps4-remote-play"
+  # GH
+  brew "awssume"
+  brew "gh"
 end
 
-unless is_virtualized?
-  cask "virtualbox"
-  cask "virtualbox-extension-pack"
-  cask "vmware-fusion" if hajnal?
+if macos?
+  cask "alfred"
+  cask "balenaetcher"
+  cask "bartender"
+  cask "borgbackup"
+  cask "carbon-copy-cloner"
+  cask "disk-inventory-x"
+  cask "docker"
+  cask "dropbox"
+  cask "evernote"
+  cask "franz"
+  cask "iina"
+  cask "iterm2"
+  cask "karabiner-elements"
+  cask "kindle"
+  cask "macdown"
+  cask "macmediakeyforwarder"
+  cask "platypus"
+  cask "rocket"
+  cask "spotify"
+  cask "vagrant"
+  cask "viscosity"
+  cask "visual-studio-code"
+  cask "vlc"
+  cask "wireshark"
+
+  # 3dprinting
+  cask "ultimaker-cura"
+  cask "openscad"
+
+  cask "caskroom/fonts/font-hack-nerd-font"
+  cask "caskroom/fonts/font-inconsolata"
+  cask "caskroom/fonts/font-inconsolata-nerd-font"
+
+  unless is_virtualized?
+    cask "virtualbox"
+    cask "virtualbox-extension-pack"
+    cask "vmware-fusion" if hajnal?
+  end
+
+  if hajnal?
+    # Acrobat reader is horrible, but at some point Preview.app started sucking at
+    # filling forms.
+    cask "adobe-acrobat-reader"
+    # For infinity thermostat control
+    cask "anki"
+    cask "bitbar"
+    cask "brave-browser"
+    cask "discord"
+    cask "mailplane"
+    cask "microsoft-teams"
+    cask "mqttfx"
+    cask "omnigraffle"
+    cask "paw"
+    cask "plantronics-hub"
+    cask "sony-ps4-remote-play"
+  end
+
+  brew "mas"
+  if mas_signed_in?
+    mas "Deliveries", id: 924726344
+    mas "Pixelmator", id: 407963104
+    mas "Reeder", id: 880001334
+    mas "Tweetbot", id: 557168941
+  end
 end
 
-cask "caskroom/fonts/font-hack-nerd-font"
-cask "caskroom/fonts/font-inconsolata"
-cask "caskroom/fonts/font-inconsolata-nerd-font"
-
-brew "mas"
-if mas_signed_in?
-  mas "Deliveries", id: 924726344
-  mas "Pixelmator", id: 407963104
-  mas "Reeder", id: 880001334
-  mas "Tweetbot", id: 557168941
-end
