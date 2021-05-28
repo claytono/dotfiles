@@ -28,7 +28,11 @@ fi
 if [[ -z "$SKIP_HOMEBREW" ]]; then
   if ! command_exists brew; then
     # Install Homebrew
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo |/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  if [[ -n "$LINUX" ]]; then
+    PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
   fi
 
   brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
