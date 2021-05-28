@@ -25,15 +25,15 @@ if [[ -n "$UNIX" ]]; then
   fi
 fi
 
-if [[ -n "$MACOS" && -z "$SKIP_HOMEBREW" ]]; then
+if [[ -z "$SKIP_HOMEBREW" ]]; then
   if ! command_exists brew; then
     # Install Homebrew
-    curl -vL https://raw.githubusercontent.com/Homebrew/install/master/install >/tmp/homebrew-install
-    ruby /tmp/homebrew-install
-    rm -f /tmp/homebrew-install
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
+  if [[ -n "$MACOS" ]]; then
+    brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
+  fi
 fi
 
 # Based on: https://github.com/skalnik/dotfiles/blob/6f1d812ce8d68a541173c1f6f81f640ad9d8840a/install.sh

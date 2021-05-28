@@ -30,6 +30,10 @@ pathmunge $GOPATH/bin
 pathmunge /usr/local/sbin
 pathmunge $HOME/bin
 
+if [ -d /home/linuxbrew/.linuxbrew/bin ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
 VSCODE_BINDIR="/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
 if [ -d "$VSCODE_BINDIR" ]; then
   pathmunge "$VSCODE_BINDIR" after
