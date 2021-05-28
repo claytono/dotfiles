@@ -41,7 +41,7 @@ pc_lred="\[$(tput setaf 9)\]"
 pc_reset="\[$(tput sgr0)\]"
 
 p_user() {
-    if [[ $USER != "coneill" && $USER != "claytono " ]]; then
+    if [[ $USER != "coneill" && $USER != "claytono " && $USER != "codespace" ]]; then
       echo "${pc_lred}\u${pc_reset}@"
     fi
 }
