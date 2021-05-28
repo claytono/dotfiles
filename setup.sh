@@ -31,9 +31,7 @@ if [[ -z "$SKIP_HOMEBREW" ]]; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  if [[ -n "$MACOS" ]]; then
-    brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
-  fi
+  brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
 fi
 
 # Based on: https://github.com/skalnik/dotfiles/blob/6f1d812ce8d68a541173c1f6f81f640ad9d8840a/install.sh
