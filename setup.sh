@@ -27,13 +27,21 @@ fi
 
 if [[ -z "$SKIP_HOMEBREW" ]]; then
   if ! command_exists brew; then
-    # Install Homebrew
-    echo |/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
+    if [[ "$CODESPACES" == "true" && -z "$SKIP_CACHE" ]]; then
+      sudo mkdir -p /home/linuxbrew/.linuxbrew
+      sudo chown --reference $HOME /home/linuxbrew/.linuxbrew
+      docker pull ghcr.io/claytono/linuxbrew-cache:latest
+      docker rm -f linuxbrew-cache || true
+      docker create --name linuxbrew-cache ghcr.io/claytono/linuxbrew-cache:latest true
+      docker cp linuxbrew-cache:/.linuxbrew /home/linuxbrew/
+      docker rm -f linuxbrew-cache || true
+      brew update
+    else
+      echo |/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
   fi
 
-  if [[ -n "$LINUX" ]]; then
-    PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
-  fi
 
   brew bundle install --no-lock --file "$BASEDIR/homebrew/Brewfile.symlink"
 fi
