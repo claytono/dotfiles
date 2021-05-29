@@ -1,0 +1,33 @@
+name: Build linuxbrew cache
+
+on:
+  schedule:
+    - cron: 34 3 * * *
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-linuxbrew-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Setup dotfiles
+      run: ./setup.sh
+    - name: Create image
+      run: tar -C /home/linuxbrew -cf - . | docker import - linuxbrew-cache:latest
+    - name: Log into registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
+
+    - name: Push image
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        docker tag linuxbrew-cache:latest ghcr.io/${GITHUB_ACTOR}/linuxbrew-cache:latest
+        docker push ghcr.io/${GITHUB_ACTOR}/linuxbrew-cache:latest
