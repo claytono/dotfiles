@@ -82,6 +82,7 @@ if macos?
   brew "gomplate"
   brew "graphviz"
   brew "hping"
+  brew "httpie"
   brew "node"
   brew "mpv"
   brew "mtr"
