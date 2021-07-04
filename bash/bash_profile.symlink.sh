@@ -68,6 +68,9 @@ if command_exists rbenv; then
 fi
 
 if command_exists pyenv; then
+    export PYENV_ROOT="$HOME/.pyenv"
+    pathmunge "$PYENV_ROOT/bin"
+    eval "$(pyenv init --path)"
     eval "$(pyenv init -)"
     eval "$(pyenv virtualenv-init -)"
 fi
