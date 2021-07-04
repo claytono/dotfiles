@@ -17,11 +17,23 @@ if [[ -n "$UNIX" ]]; then
     NEED="curl $NEED"
   fi
 
-  # Used to have more cases here, so this is more complex than needed.
+  if ! command_exists git; then
+    NEED="git $NEED"
+  fi
 
-  if [[ "$NEED" != "" ]]; then
-    echo "Need the following binaries available: $NEED"
-    exit 1
+  if ! command_exists gcc; then
+    NEED="build-essential $NEED"
+  fi
+
+  # Used to have more cases here, so this is more complex than needed.
+  if command_exists apt-get; then
+    sudo apt-get update
+    sudo apt-get install $NEED -y
+  else
+    if [[ "$NEED" != "" ]]; then
+      echo "Need the following binaries available: $NEED"
+      exit 1
+    fi
   fi
 fi
 
