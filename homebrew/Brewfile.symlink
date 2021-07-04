@@ -45,6 +45,7 @@ brew "atool"
 brew "calc"
 brew "fd"
 brew "fzf"
+brew "gh"
 brew "git"
 brew "git-crypt"
 brew "htop"
@@ -102,7 +103,6 @@ if macos?
 
   # GH
   brew "awssume"
-  brew "gh"
 end
 
 if macos?
