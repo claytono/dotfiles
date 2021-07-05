@@ -97,7 +97,6 @@ if macos?
   brew "shellcheck"
   brew "switchaudio-osx"
   brew "telnet"
-  brew "terraform"
   brew "terminal-notifier" # Needed by borgmatic-runner, but brew bundle doesn't detect it.
   brew "unrar"
   brew "watch"
