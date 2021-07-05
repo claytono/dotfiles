@@ -151,7 +151,6 @@ if macos?
     cask "adobe-acrobat-reader"
     # For infinity thermostat control
     cask "anki"
-    cask "bitbar"
     cask "brave-browser"
     cask "discord"
     cask "mailplane"
@@ -161,6 +160,7 @@ if macos?
     cask "paw"
     cask "plantronics-hub"
     cask "sony-ps4-remote-play"
+    cask "swiftbar"
   end
 
   brew "mas"
