@@ -3,6 +3,11 @@
 	email = clayton@oneill.net
 	signingKey = clayton@oneill.net
 
+[url "git@github.com:claytono"]
+        insteadOf = https://github.com/claytono
+[url "git@github.com:github"]
+        insteadOf = https://github.com/github
+
 [color]
 	diff = auto
 	status = auto
