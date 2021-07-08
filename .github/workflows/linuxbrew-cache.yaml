@@ -20,7 +20,7 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v2
     - name: Setup dotfiles
-      run: ./setup.sh
+      run: ./script/bootstrap
     - name: Create image
       run: tar -C /home/linuxbrew -cf - . | docker import - linuxbrew-cache:latest
     - name: Log into registry
