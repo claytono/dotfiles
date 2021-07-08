@@ -80,6 +80,7 @@ if command_exists pyenv; then
 fi
 
 alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
+alias "y=yadm"
 
 # check if this is a login and/or interactive shell
 [ "$0" = "-bash" ] && export LOGIN_BASH="1"
