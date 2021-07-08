@@ -63,6 +63,7 @@ brew "tmux"
 brew "vim"
 brew "wget"
 brew "xz"
+brew "yadm"
 
 if macos?
   brew "ansible"

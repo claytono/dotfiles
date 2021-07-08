@@ -19,5 +19,5 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "bootstrap", type: "shell", privileged: false,
-    inline: "bash -xve /vagrant/setup.sh"
+    inline: "bash -xve /vagrant/script/bootstrap"
 end

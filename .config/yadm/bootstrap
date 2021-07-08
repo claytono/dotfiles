@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+if [[ -z "$SKIP_HOMEBREW" ]]; then
+  if ! command_exists brew; then
+      PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
+    if [[ "$CODESPACES" == "true" && -z "$SKIP_CACHE" ]]; then
+      sudo mkdir -p /home/linuxbrew/.linuxbrew
+      sudo chown --reference $HOME /home/linuxbrew/.linuxbrew
+      docker pull ghcr.io/claytono/linuxbrew-cache:latest
+      docker rm -f linuxbrew-cache || true
+      docker create --name linuxbrew-cache ghcr.io/claytono/linuxbrew-cache:latest true
+      docker cp linuxbrew-cache:/.linuxbrew /home/linuxbrew/
+      docker rm -f linuxbrew-cache || true
+      brew update
+    else
+      echo |/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+  fi
+
+
+  brew bundle install --no-lock --global
+fi
+
+if [ ! -d ~/.vim/bundle/Vundle.vim ]; then
+  git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+  vim +PluginInstall +qall
+fi
