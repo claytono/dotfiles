@@ -45,12 +45,16 @@ if command_exists brew; then
   fi
 fi
 
-if [ $MACOS ]; then
-  export CLICOLOR=1
-  export LSCOLORS=ExFxCxDxBxegedabagacad
-  if command_exists gls; then
-    eval $(gdircolors)
-    alias ls="gls --color=aut"
+if command_exists lsd; then
+    alias ls=lsd
+else
+  if [ $MACOS ]; then
+    export CLICOLOR=1
+    export LSCOLORS=ExFxCxDxBxegedabagacad
+    if command_exists gls; then
+      eval $(gdircolors)
+      alias ls="gls --color=aut"
+    fi
   fi
 fi
 
