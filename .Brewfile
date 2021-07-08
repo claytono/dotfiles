@@ -30,12 +30,13 @@ end
 
 if macos?
   tap "caskroom/fonts"
+  tap "claytono/extras"
   tap "homebrew/services"
   tap "homebrew/cask"
   tap "homebrew/cask-drivers"
   tap "hmarr/tap"
-  tap "claytono/extras"
   tap "heroku/brew"
+  tap "yqrashawn/goku"
 
   tap "github/bootstrap"
   tap "github/packages"
@@ -43,6 +44,7 @@ end
 
 brew "atool"
 brew "calc"
+brew "dust"
 brew "fd"
 brew "fzf"
 brew "gh"
@@ -51,8 +53,10 @@ brew "git-crypt"
 brew "htop"
 brew "jq"
 brew "k9s"
+brew "kubectx"
 brew "kubernetes-cli"
 brew "lftp"
+brew "lsd"
 brew "nmap"
 brew "p7zip"
 brew "prettyping"
@@ -63,6 +67,7 @@ brew "tmux"
 brew "vim"
 brew "wget"
 brew "xz"
+brew "yadm"
 
 if macos?
   brew "ansible"
@@ -103,9 +108,7 @@ if macos?
 
   # GH
   brew "awssume"
-end
 
-if macos?
   cask "alfred"
   cask "balenaetcher"
   cask "bartender"
@@ -116,6 +119,7 @@ if macos?
   cask "dropbox"
   cask "evernote"
   cask "franz"
+  cask "hammerspoon"
   cask "iina"
   cask "iterm2"
   cask "karabiner-elements"
@@ -125,6 +129,7 @@ if macos?
   cask "platypus"
   cask "rocket"
   cask "spotify"
+  cask "synology-drive"
   cask "vagrant"
   cask "viscosity"
   cask "visual-studio-code"
