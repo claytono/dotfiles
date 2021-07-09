@@ -1,0 +1,72 @@
+{
+  :tos {
+    left_command_hold_down { :key left_command :hold_down_ms 100 }
+  }
+
+  :main [
+    ;; !  | means mandatory -   modifier(s) alone when pressend change behavior
+    ;; #  | means optional  -   modifiers are optional (but atleast one necessary)
+
+    ;; :!Ca is keycode :a and prefix a with !C
+
+    ;; C  | left_command
+    ;; T  | left_control
+    ;; O  | left_option
+    ;; S  | left_shift
+    ;; F  | fn
+    ;; Q  | right_command
+    ;; W  | right_control
+    ;; E  | right_option
+    ;; R  | right_shift
+
+    ;; ## | optional any (this has no effect when used on the RHS; only LHS)
+    ;; !! | command + control + optional + shift (hyper)
+
+    ;; to understand better how modifiers work in karabiner
+    ;; karabiner definition of mandatory and optional
+    ;; https://karabiner-elements.pqrs.org/docs/json/complex-modifications-manipulator-definition/from/modifiers/
+
+
+    ;; need to prefix C T O S F with ! or #
+    ;;
+    ;; code for all this:
+    ;; https://github.com/yqrashawn/GokuRakuJoudo/blob/b9b334a187379f9bc8182ad59e2cca2a1789e9c0/src/karabiner_configurator/keys.clj#L68
+;;    {:des "Map right option to Fn"
+;;     :rules [[:right_option :fn]]
+;;    }
+
+    {:des "Left shift to Hyper"
+     :rules [[:##left_shift :!CTOleft_shift]]
+    }
+
+    {:des "Caps-Lock to control if held, escape if tapped"
+     :rules [[:##caps_lock :left_control nil {:alone :escape}]]
+    }
+    {:des "left control should send left shift" :rules [[:left_control :left_shift]]}
+
+    {:des "Overload arrow keys"
+     :rules [[:!Eup_arrow, :page_up]
+             [:!Edown_arrow, :page_down]
+             [:!Eleft_arrow, :home]
+             [:!Eright_arrow, :end]
+             ]
+     }
+
+;;    {:des "left-shift mode"
+;;    :rules [[:##left_shift ["shift-mode" 1] nil {:afterup ["shift-mode" 0]}]
+;;            [:##e :page_up ["shift-mode" 1]]
+;;            [:##c :page_down ["shift-mode" 1]]
+;;            [:##a :left_arrow ["shift-mode" 1]]
+;;            [:##s :down_arrow ["shift-mode" 1]]
+;;            [:##w :up_arrow ["shift-mode" 1]]
+;;            [:##d :right_arrow ["shift-mode" 1]]
+;;            [:##q :home ["shift-mode" 1]]
+;;            [:##z :end ["shift-mode" 1]]
+;;            [:##up_arrow :vk_none]
+;;            [:##down_arrow :vk_none]
+;;            [:##left_arrow :vk_none]
+;;            [:##right_arrow :vk_none]
+;;            ]
+;;    }
+ ]
+}
