@@ -84,6 +84,7 @@ if macos?
   brew "curl"
   brew "findutils"
   brew "go"
+  brew "goku"
   brew "gomplate"
   brew "graphviz"
   brew "hping"

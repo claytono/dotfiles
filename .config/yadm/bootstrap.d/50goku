@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+if ! command_exists goku; then
+    exit 0
+fi
+exec goku
