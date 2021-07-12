@@ -104,7 +104,6 @@ if macos?
   brew "switchaudio-osx"
   brew "telnet"
   brew "terminal-notifier" # Needed by borgmatic-runner, but brew bundle doesn't detect it.
-  brew "unrar"
   brew "watch"
 
   # GH
