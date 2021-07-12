@@ -38,8 +38,8 @@ if macos?
   tap "heroku/brew"
   tap "yqrashawn/goku"
 
-  tap "github/bootstrap"
-  tap "github/packages"
+  tap "github/bootstrap" if hajnal?
+  tap "github/packages" if hajnal?
 end
 
 brew "atool"
@@ -108,7 +108,7 @@ if macos?
   brew "watch"
 
   # GH
-  brew "awssume"
+  brew "awssume" if hajnal?
 
   cask "alfred"
   cask "balenaetcher"
