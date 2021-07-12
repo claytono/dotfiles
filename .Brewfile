@@ -141,8 +141,6 @@ if macos?
   cask "openscad"
 
   cask "caskroom/fonts/font-hack-nerd-font"
-  cask "caskroom/fonts/font-inconsolata"
-  cask "caskroom/fonts/font-inconsolata-nerd-font"
 
   unless is_virtualized?
     cask "virtualbox"
