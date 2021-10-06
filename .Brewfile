@@ -37,6 +37,7 @@ if macos?
   tap "hmarr/tap"
   tap "heroku/brew"
   tap "yqrashawn/goku"
+  tap "candid82/brew" # Needed for goku
 
   tap "github/bootstrap" if hajnal?
   tap "github/packages" if hajnal?
@@ -85,6 +86,8 @@ if macos?
   brew "findutils"
   brew "go"
   brew "goku"
+    brew "joker" # Needed for goku
+    brew "watchexec" # Needed for goku
   brew "gomplate"
   brew "graphviz"
   brew "hping"
@@ -156,6 +159,7 @@ if macos?
     cask "anki"
     cask "brave-browser"
     cask "discord"
+    cask "fujitsu-scansnap-home"
     cask "mailplane"
     cask "microsoft-teams"
     cask "mqttfx"
