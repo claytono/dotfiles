@@ -31,42 +31,23 @@
     ;;
     ;; code for all this:
     ;; https://github.com/yqrashawn/GokuRakuJoudo/blob/b9b334a187379f9bc8182ad59e2cca2a1789e9c0/src/karabiner_configurator/keys.clj#L68
-;;    {:des "Map right option to Fn"
-;;     :rules [[:right_option :fn]]
-;;    }
 
-    {:des "Left shift to Hyper"
-     :rules [[:##left_shift :!CTOleft_shift]]
+    {:des "Left control to Hyper"
+     :rules [[:##left_control :!CTOleft_shift]]
+    }
+
+    {:des "Fn to Hyper"
+     :rules [[:##fn :!CTOleft_shift]]
     }
 
     {:des "Caps-Lock to control if held, escape if tapped"
      :rules [[:##caps_lock :left_control nil {:alone :escape}]]
     }
-    {:des "left control should send left shift" :rules [[:left_control :left_shift]]}
 
-    {:des "Overload arrow keys"
-     :rules [[:!Eup_arrow, :page_up]
-             [:!Edown_arrow, :page_down]
-             [:!Eleft_arrow, :home]
-             [:!Eright_arrow, :end]
-             ]
-     }
+    {:des "Right option to fn"
+     :rules [[:##right_option :!Fn]]
+    }
 
-;;    {:des "left-shift mode"
-;;    :rules [[:##left_shift ["shift-mode" 1] nil {:afterup ["shift-mode" 0]}]
-;;            [:##e :page_up ["shift-mode" 1]]
-;;            [:##c :page_down ["shift-mode" 1]]
-;;            [:##a :left_arrow ["shift-mode" 1]]
-;;            [:##s :down_arrow ["shift-mode" 1]]
-;;            [:##w :up_arrow ["shift-mode" 1]]
-;;            [:##d :right_arrow ["shift-mode" 1]]
-;;            [:##q :home ["shift-mode" 1]]
-;;            [:##z :end ["shift-mode" 1]]
-;;            [:##up_arrow :vk_none]
-;;            [:##down_arrow :vk_none]
-;;            [:##left_arrow :vk_none]
-;;            [:##right_arrow :vk_none]
-;;            ]
-;;    }
+
  ]
 }
