@@ -45,9 +45,15 @@
     }
 
     {:des "Right option to fn"
-     :rules [[:##right_option :!Fn]]
+     :rules [[:##right_option :fn]]
     }
 
-
+    {:des "Overload arrow keys"
+     :rules [[:!Fup_arrow, :page_up]
+             [:!Fdown_arrow, :page_down]
+             [:!Fleft_arrow, :home]
+             [:!Fright_arrow, :end]
+             ]
+     }
  ]
 }
