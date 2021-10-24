@@ -79,6 +79,10 @@ if command_exists pyenv; then
     eval "$(pyenv virtualenv-init -)"
 fi
 
+if command_exists direnv; then
+    eval "$(direnv hook bash)"
+fi
+
 alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
 alias "y=yadm"
 
