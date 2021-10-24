@@ -28,6 +28,10 @@ def hajnal?
   hostname == 'hajnal'
 end
 
+def xtal?
+  hostname == 'xtal'
+end
+
 if macos?
   tap "caskroom/fonts"
   tap "claytono/extras"
@@ -152,20 +156,27 @@ if macos?
   end
 
   if hajnal?
+    cask "microsoft-teams"
+    cask "plantronics-hub"
+    cask "paw"
+  end
+
+  if xtal?
+    cask "mqttfx"
+    cask "fujitsu-scansnap-home"
+  end
+
+  if hajnal? or xtal?
     # Acrobat reader is horrible, but at some point Preview.app started sucking at
     # filling forms.
     cask "adobe-acrobat-reader"
     # For infinity thermostat control
     cask "anki"
+    cask "arq"
     cask "brave-browser"
     cask "discord"
-    cask "fujitsu-scansnap-home"
     cask "mailplane"
-    cask "microsoft-teams"
-    cask "mqttfx"
     cask "omnigraffle"
-    cask "paw"
-    cask "plantronics-hub"
     cask "sony-ps4-remote-play"
     cask "swiftbar"
   end
