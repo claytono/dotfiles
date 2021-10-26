@@ -11,6 +11,10 @@ def linux?
   RUBY_PLATFORM =~ /linux/
 end
 
+def apple_silicon?
+  macos? and RUBY_PLATFORM =~ /arm64/
+end
+
 def is_virtualized?
   `ioreg -l|grep -i board-id` =~ /Virtualbox/i
 end
@@ -149,7 +153,7 @@ if macos?
 
   cask "caskroom/fonts/font-hack-nerd-font"
 
-  unless is_virtualized?
+  unless is_virtualized? or apple_silicon?
     cask "virtualbox"
     cask "virtualbox-extension-pack"
     cask "vmware-fusion" if hajnal?
