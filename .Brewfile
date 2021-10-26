@@ -37,11 +37,11 @@ def xtal?
 end
 
 if macos?
-  tap "caskroom/fonts"
   tap "claytono/extras"
   tap "homebrew/services"
   tap "homebrew/cask"
   tap "homebrew/cask-drivers"
+  tap "homebrew/cask-fonts"
   tap "hmarr/tap"
   tap "heroku/brew"
   tap "yqrashawn/goku"
@@ -151,7 +151,7 @@ if macos?
   cask "ultimaker-cura"
   cask "openscad"
 
-  cask "caskroom/fonts/font-hack-nerd-font"
+  cask "homebrew/cask-fonts/font-hack-nerd-font"
 
   unless is_virtualized? or apple_silicon?
     cask "virtualbox"
