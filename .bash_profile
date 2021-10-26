@@ -30,6 +30,10 @@ pathmunge $GOPATH/bin
 pathmunge /usr/local/sbin
 pathmunge $HOME/bin
 
+if [ -d /opt/homebrew/bin ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
 if [ -d /home/linuxbrew/.linuxbrew/bin ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
