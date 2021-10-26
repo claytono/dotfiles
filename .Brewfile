@@ -123,7 +123,6 @@ if macos?
   cask "alfred"
   cask "balenaetcher"
   cask "bartender"
-  cask "borgbackup"
   cask "carbon-copy-cloner"
   cask "disk-inventory-x"
   cask "docker"
