@@ -29,11 +29,11 @@ def hostname
 end
 
 def hajnal?
-  hostname == 'hajnal'
+  hostname.start_with? == 'hajnal'
 end
 
 def xtal?
-  hostname == 'xtal'
+  hostname.start_with? 'xtal'
 end
 
 if macos?
@@ -120,24 +120,29 @@ if macos?
   # GH
   brew "awssume" if hajnal?
 
+  cask "1password"
   cask "alfred"
   cask "balenaetcher"
   cask "bartender"
   cask "carbon-copy-cloner"
+  cask "cleanshot"
   cask "disk-inventory-x"
   cask "docker"
-  cask "dropbox"
   cask "evernote"
   cask "franz"
+  cask "google-chrome"
   cask "hammerspoon"
   cask "iina"
   cask "iterm2"
   cask "karabiner-elements"
   cask "kindle"
   cask "macdown"
+  cask "mailplane"
   cask "macmediakeyforwarder"
+  cask "microsoft-edge"
   cask "platypus"
   cask "rocket"
+  cask "slack"
   cask "spotify"
   cask "synology-drive"
   cask "vagrant"
@@ -173,7 +178,6 @@ if macos?
     # Acrobat reader is horrible, but at some point Preview.app started sucking at
     # filling forms.
     cask "adobe-acrobat-reader"
-    # For infinity thermostat control
     cask "anki"
     cask "arq"
     cask "brave-browser"
@@ -189,7 +193,7 @@ if macos?
     mas "Deliveries", id: 924726344
     mas "Pixelmator", id: 407963104
     mas "Reeder", id: 880001334
-    mas "Tweetbot", id: 557168941
+    mas "Tweetbot", id: 1384080005
   end
 end
 
