@@ -188,12 +188,5 @@ if macos?
     cask "swiftbar"
   end
 
-  brew "mas"
-  if mas_signed_in?
-    mas "Deliveries", id: 924726344
-    mas "Pixelmator", id: 407963104
-    mas "Reeder", id: 880001334
-    mas "Tweetbot", id: 1384080005
-  end
 end
 
