@@ -142,6 +142,7 @@ if macos?
   cask "microsoft-edge"
   cask "platypus"
   cask "rocket"
+  cask "setapp"
   cask "slack"
   cask "spotify"
   cask "synology-drive"
