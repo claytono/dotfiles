@@ -125,7 +125,6 @@ if macos?
   cask "balenaetcher"
   cask "bartender"
   cask "carbon-copy-cloner"
-  cask "cleanshot"
   cask "disk-inventory-x"
   cask "docker"
   cask "evernote"
