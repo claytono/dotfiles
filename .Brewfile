@@ -29,7 +29,7 @@ def hostname
 end
 
 def hajnal?
-  hostname.start_with? == 'hajnal'
+  hostname.start_with? 'hajnal'
 end
 
 def xtal?
