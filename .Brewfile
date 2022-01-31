@@ -85,9 +85,6 @@ if macos?
   brew "azure-cli"
   brew "bash"
   brew "bash-completion"
-  brew "borgbackup"
-  brew "borgmatic"
-  brew "borgmatic-runner"
   brew "codeowners"
   brew "coreutils"
   brew "curl"
@@ -114,7 +111,6 @@ if macos?
   brew "shellcheck"
   brew "switchaudio-osx"
   brew "telnet"
-  brew "terminal-notifier" # Needed by borgmatic-runner, but brew bundle doesn't detect it.
   brew "watch"
 
   # GH
