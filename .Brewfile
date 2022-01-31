@@ -135,6 +135,7 @@ if macos?
   cask "mailplane"
   cask "macmediakeyforwarder"
   cask "microsoft-edge"
+  cask "notion"
   cask "platypus"
   cask "rocket"
   cask "setapp"
@@ -180,7 +181,6 @@ if macos?
     cask "discord"
     cask "mailplane"
     cask "omnigraffle"
-    cask "sony-ps4-remote-play"
     cask "swiftbar"
   end
 
