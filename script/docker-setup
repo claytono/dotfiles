@@ -1,0 +1,12 @@
+#!/bin/bash -xveu
+
+# This runs inside the docker container to set things up for the bootstrap script and then invoke it.
+
+BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$BASEDIR"
+
+apt update
+apt install sudo -y
+
+useradd -m test
+su -c script/bootstrap test
