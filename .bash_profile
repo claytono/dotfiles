@@ -87,6 +87,20 @@ if command_exists direnv; then
     eval "$(direnv hook bash)"
 fi
 
+if command_exists asdf; then
+    . $(brew --prefix asdf)/libexec/asdf.sh
+    . $(brew --prefix asdf)/etc/bash_completion.d/asdf.bash
+fi
+
+if [ -f ~/.netrc ]; then
+    if grep -q goproxy.githubapp.com ~/.netrc; then
+        export GOPROXY=https://goproxy.githubapp.com/mod,https://proxy.golang.org/,direct
+        export GOPRIVATE=
+        export GONOPROXY=
+        export GONOSUMDB='github.com/github/*'
+    fi
+fi
+
 alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
 alias "y=yadm"
 
