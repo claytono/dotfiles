@@ -32,6 +32,7 @@ pathmunge $HOME/bin
 
 if [ -d /opt/homebrew/bin ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
+  pathmunge "$HOMEBREW_PREFIX/opt/findutils/libexec/gnubin"
 fi
 
 if [ -d /home/linuxbrew/.linuxbrew/bin ]; then
