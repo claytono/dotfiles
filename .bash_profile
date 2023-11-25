@@ -43,6 +43,10 @@ if [ -d "$VSCODE_BINDIR" ]; then
   pathmunge "$VSCODE_BINDIR" after
 fi
 
+if [ -d "${HOME}/.krew/bin" ]; then
+  pathmunge "${HOME}/.krew/bin" after
+fi
+
 if command_exists brew; then
   if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
     source $(brew --prefix)/etc/bash_completion
