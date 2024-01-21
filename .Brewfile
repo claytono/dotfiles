@@ -142,7 +142,6 @@ if macos?
   cask "slack"
   cask "spotify"
   cask "synology-drive"
-  cask "vagrant"
   cask "viscosity"
   cask "visual-studio-code"
   cask "vlc"
