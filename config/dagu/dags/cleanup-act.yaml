@@ -1,0 +1,5 @@
+schedule: "0 5 * * 0"
+steps:
+  - id: clean_cache
+    script: |
+      rm -rf ~/.cache/act/ ~/.cache/actcache/

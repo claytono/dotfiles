@@ -1,0 +1,21 @@
+schedule: "0 1 * * 0"
+steps:
+  - id: prune_eval_cache
+    script: |
+      find ~/.cache/nix/eval-cache-v*/ -type f -mtime +30 -delete 2>/dev/null || true
+
+  - id: prune_tarball_cache
+    script: |
+      if [ -d ~/.cache/nix/tarball-cache ]; then
+        cd ~/.cache/nix/tarball-cache && git gc --prune=30.days.ago 2>/dev/null || true
+      fi
+
+  - id: clean_stale_direnv
+    script: |
+      find ~/src -maxdepth 3 -name .direnv -type d -mtime +90 -exec rm -rf {} + 2>/dev/null || true
+
+  - id: gc
+    command: nix-collect-garbage --delete-older-than 7d
+
+  - id: optimise_store
+    command: nix store optimise
