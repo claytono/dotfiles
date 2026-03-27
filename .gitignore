@@ -2,6 +2,13 @@
 .vscode
 .vagrant
 
+# Dagu runtime files
+config/dagu/dags/.dag.index
+config/dagu/dags/docs/
+config/dagu/dags/memory/
+config/dagu/dags/skills/
+config/dagu/dags/souls/
+
 # Beads (JSONL committed only to beads-sync branch)
 .beads/issues.jsonl
 .beads/interactions.jsonl

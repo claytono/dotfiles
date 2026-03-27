@@ -1,0 +1,4 @@
+schedule: "0 3 * * 0"
+steps:
+  - id: cache_prune
+    command: uv cache prune

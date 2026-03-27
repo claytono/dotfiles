@@ -1,0 +1,18 @@
+type: graph
+schedule: "0 2 * * 0"
+steps:
+  - id: prune_containers
+    command: docker container prune -f --filter "until=72h"
+
+  - id: prune_dangling_images
+    command: docker image prune -f
+
+  - id: prune_build_cache
+    command: docker builder prune -f --filter "until=168h"
+
+  - id: prune_networks
+    command: docker network prune -f
+
+  - id: prune_old_images
+    depends: [prune_containers]
+    command: docker image prune -a -f --filter "until=720h"

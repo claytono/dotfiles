@@ -1,0 +1,9 @@
+schedule: "0 6 * * 0"
+steps:
+  - id: rotate_logs
+    script: |
+      for log in ~/.local/share/dagu/dagu.stdout.log ~/.local/share/dagu/dagu.stderr.log; do
+        if [ -f "$log" ] && [ "$(stat -f%z "$log")" -gt 10485760 ]; then
+          truncate -s 0 "$log"
+        fi
+      done

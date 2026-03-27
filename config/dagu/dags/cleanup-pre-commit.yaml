@@ -1,0 +1,4 @@
+schedule: "0 4 * * 0"
+steps:
+  - id: gc
+    command: pre-commit gc

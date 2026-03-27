@@ -47,6 +47,26 @@ let
     };
   };
 
+  dagu = pkgs.stdenv.mkDerivation rec {
+    pname = "dagu";
+    version = "2.3.8";
+    src = pkgs.fetchurl {
+      url = "https://github.com/dagu-org/dagu/releases/download/v${version}/dagu_${version}_darwin_arm64.tar.gz";
+      sha256 = "1cz16fdsg1jypa5vlrnxwsz4nq6sr5l2k1x2282mi1fhdwgpi9hl";
+    };
+    sourceRoot = ".";
+    installPhase = ''
+      mkdir -p $out/bin
+      cp dagu $out/bin/
+      chmod +x $out/bin/dagu
+    '';
+    meta = with pkgs.lib; {
+      description = "A powerful, lightweight workflow engine for scheduling and running complex pipelines";
+      homepage = "https://github.com/dagu-org/dagu";
+      platforms = [ "aarch64-darwin" ];
+    };
+  };
+
 in {
   home.username = "coneill";
   home.homeDirectory = "/Users/coneill";
@@ -90,6 +110,7 @@ in {
     nodejs_24
     p7zip
     patchutils_0_4_2
+    pre-commit
     prettyping
     pstree
     pv
@@ -111,5 +132,33 @@ in {
     watch-only
     coreutils-partial
     ts-only
+    dagu
   ];
+
+  launchd.agents.dagu = {
+    enable = true;
+    config = {
+      ProgramArguments = [
+        "${dagu}/bin/dagu"
+        "start-all"
+        "--host" "127.0.0.1"
+        "--port" "8080"
+        "--dags" "${config.home.homeDirectory}/src/dotfiles/config/dagu/dags"
+      ];
+      EnvironmentVariables = {
+        HOME = config.home.homeDirectory;
+        SHELL = "${pkgs.bash}/bin/bash";
+        PATH = "/nix/var/nix/profiles/default/bin:${config.home.homeDirectory}/.nix-profile/bin:${config.home.homeDirectory}/.orbstack/bin:/usr/bin:/bin:/usr/sbin";
+        DAGU_AUTH_MODE = "none";
+      };
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "${config.home.homeDirectory}/.local/share/dagu/dagu.stdout.log";
+      StandardErrorPath = "${config.home.homeDirectory}/.local/share/dagu/dagu.stderr.log";
+    };
+  };
+
+  home.activation.daguDataDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "${config.home.homeDirectory}/.local/share/dagu"
+  '';
 }
