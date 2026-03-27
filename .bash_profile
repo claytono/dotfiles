@@ -3,8 +3,6 @@
 # OS variables
 [ "$(uname -s)" = "Darwin" ] && export MACOS=1 && export UNIX=1
 [ "$(uname -s)" = "Linux" ] && export LINUX=1 && export UNIX=1
-uname -s | grep -q "_NT-" && export WINDOWS=1
-grep -q "Microsoft" /proc/version 2>/dev/null && export UBUNTU_ON_WINDOWS=1
 
 command_exists () {
     type "$1" &> /dev/null ;
@@ -20,13 +18,14 @@ pathmunge () {
         fi
 }
 
-AIRPORTCMD="/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport"
-if [ -x $AIRPORTCMD ]; then
-  alias airport=$AIRPORTCMD
-fi
+move_to_front() {
+    local dir="$1"
+    # Remove the directory from the PATH if it exists
+    PATH=$(echo "$PATH" | awk -v RS=: -v ORS=: '$0 != "'"$dir"'"' | sed 's/:$//')
+    # Add the directory to the front of the PATH
+    export PATH="$dir:$PATH"
+}
 
-export GOPATH=$HOME/src/go
-pathmunge $GOPATH/bin
 pathmunge /usr/local/sbin
 pathmunge $HOME/bin
 
@@ -48,9 +47,14 @@ if [ -d "${HOME}/.krew/bin" ]; then
   pathmunge "${HOME}/.krew/bin" after
 fi
 
+# Check if bash completion is available before sourcing
 if command_exists brew; then
   if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
-    source $(brew --prefix)/etc/bash_completion
+    if command_exists complete; then
+      source $(brew --prefix)/etc/bash_completion
+    else
+      echo "Warning: bash completion not available - 'complete' command not found" >&2
+    fi
   fi
 fi
 
@@ -67,55 +71,36 @@ else
   fi
 fi
 
-if command_exists hub; then
-    alias git=hub
-fi
-
 if command_exists vim; then
     export EDITOR=$(type -p vim)
     export GIT_EDITOR=$EDITOR
 fi
 
-if command_exists rbenv; then
-    eval "$(rbenv init -)"
+# OrbStack: command-line tools and integration
+if [ -f ~/.orbstack/shell/init.bash ]; then
+  source ~/.orbstack/shell/init.bash
 fi
-
-if command_exists pyenv; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    pathmunge "$PYENV_ROOT/bin"
-    eval "$(pyenv init --path)"
-    eval "$(pyenv init -)"
-    eval "$(pyenv virtualenv-init -)"
+# Nix PATH priority - ensure nix binaries come first
+# User profile must be move_to_front'd last so it ends up first in PATH
+if [ -d /nix/var/nix/profiles/default/bin ]; then
+  move_to_front /nix/var/nix/profiles/default/bin
 fi
-
-if command_exists direnv; then
-    eval "$(direnv hook bash)"
+if [ -d ~/.nix-profile/bin ]; then
+  move_to_front ~/.nix-profile/bin
 fi
-
-if command_exists asdf; then
-    . $(brew --prefix asdf)/libexec/asdf.sh
-    . $(brew --prefix asdf)/etc/bash_completion.d/asdf.bash
-fi
-
-if [ -f ~/.netrc ]; then
-    if grep -q goproxy.githubapp.com ~/.netrc; then
-        export GOPROXY=https://goproxy.githubapp.com/mod,https://proxy.golang.org/,direct
-        export GOPRIVATE=
-        export GONOPROXY=
-        export GONOSUMDB='github.com/github/*'
-    fi
-fi
-
-alias "kt=watch kubectl get nodes,pods,cronjobs --all-namespaces -o wide"
-alias "y=yadm"
 
 # check if this is a login and/or interactive shell
-[ "$0" = "-bash" ] && export LOGIN_BASH="1"
-echo "$-" | grep -q "i" && export INTERACTIVE_BASH="1"
+# Use shopt instead of $0 check - works with both -bash and bash -l
+shopt -q login_shell && export LOGIN_BASH="1"
+[[ "$-" == *i* ]] && export INTERACTIVE_BASH="1"
 
 # run bashrc if this is a login, interactive shell
 if [ -n "$LOGIN_BASH" ] && [ -n "$INTERACTIVE_BASH" ]; then
   source ~/.bashrc
 fi
 
-export PATH="$HOME/.cargo/bin:$PATH"
+
+# LM Studio CLI
+if [ -d ~/.lmstudio/bin ]; then
+  pathmunge ~/.lmstudio/bin after
+fi

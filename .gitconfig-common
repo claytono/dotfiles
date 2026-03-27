@@ -27,14 +27,14 @@
 	decorate = true
         mailmap = true
 
-[hub]
-protocol = https
-
 [github]
 	user = claytono
 [protocol]
 	version = 2
 [push]
-	default = simple
+	default = current
+	autoSetupRemote = true
 [init]
 	defaultBranch = main
+[pull]
+	rebase = true
