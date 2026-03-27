@@ -1,3 +1,7 @@
 *.swp
 .vscode
 .vagrant
+
+# Beads (JSONL committed only to beads-sync branch)
+.beads/issues.jsonl
+.beads/interactions.jsonl
