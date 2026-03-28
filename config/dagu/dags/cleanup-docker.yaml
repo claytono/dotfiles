@@ -1,5 +1,6 @@
 type: graph
 schedule: "0 2 * * 0"
+queue: cleanup
 steps:
   - id: prune_containers
     command: docker container prune -f --filter "until=72h"

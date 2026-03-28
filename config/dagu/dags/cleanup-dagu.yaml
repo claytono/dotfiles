@@ -1,4 +1,5 @@
 schedule: "0 6 * * 0"
+queue: cleanup
 steps:
   - id: rotate_logs
     script: |

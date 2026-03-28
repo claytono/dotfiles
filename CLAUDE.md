@@ -31,3 +31,20 @@ source ~/.bash_profile
 - Shell configs (`.bash_profile`, `.bashrc`) must be idempotent - sourcing multiple times should have no side effects.
 - Keep shell configs compatible with both macOS and Linux.
 - Use defensive checks (e.g., `[ -f file ] && source file`) for optional integrations.
+
+## Dagu Job Scheduler
+
+Dagu runs as a launchd agent on macOS, configured in `home.nix`. Configuration lives in `config/dagu/`:
+- `config.yaml` — server config (paths, queues). Loaded via `--config` flag in the wrapper script.
+- `base.yaml` — shared DAG defaults (retry policy, healthcheck handler). All DAGs inherit these.
+- `dags/` — DAG definitions
+- `dagu-wrapper.sh` — launchd entrypoint. Reads healthcheck secrets from macOS Keychain, then exec's dagu with `--config`.
+- `scripts/healthcheck-ping.sh` — called by the exit handler in base.yaml. Creates healthchecks.io checks on demand and pings success/fail.
+
+Dagu logs (useful for debugging):
+- `~/.local/share/dagu/dagu.stdout.log`
+- `~/.local/share/dagu/dagu.stderr.log`
+
+Healthcheck secrets are stored in macOS Keychain (bootstrapped via `scripts/bootstrap-secrets --apply`).
+
+Web UI: http://localhost:6767

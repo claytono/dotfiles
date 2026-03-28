@@ -1,4 +1,5 @@
 schedule: "0 3 * * 0"
+queue: cleanup
 steps:
   - id: cache_prune
     command: uv cache prune

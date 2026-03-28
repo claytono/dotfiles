@@ -1,0 +1,11 @@
+max_active_steps: 10
+catchup_window: "6h"
+
+retry_policy:
+  limit: 3
+  interval_sec: 5
+
+handler_on:
+  exit:
+    id: healthcheck_ping
+    command: $HOME/src/dotfiles/config/dagu/scripts/healthcheck-ping.sh
