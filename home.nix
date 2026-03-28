@@ -139,11 +139,7 @@ in {
     enable = true;
     config = {
       ProgramArguments = [
-        "${dagu}/bin/dagu"
-        "start-all"
-        "--host" "127.0.0.1"
-        "--port" "8080"
-        "--dags" "${config.home.homeDirectory}/src/dotfiles/config/dagu/dags"
+        "${config.home.homeDirectory}/src/dotfiles/config/dagu/dagu-wrapper.sh"
       ];
       EnvironmentVariables = {
         HOME = config.home.homeDirectory;

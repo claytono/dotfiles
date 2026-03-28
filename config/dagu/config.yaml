@@ -1,0 +1,8 @@
+paths:
+  dags_dir: ~/src/dotfiles/config/dagu/dags
+  base_config: ~/src/dotfiles/config/dagu/base.yaml
+
+queues:
+  config:
+    - name: cleanup
+      max_concurrency: 1
