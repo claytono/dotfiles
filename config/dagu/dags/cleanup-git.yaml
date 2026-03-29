@@ -1,0 +1,7 @@
+schedule: "0 7 * * *"
+queue: cleanup
+env:
+  - HEALTHCHECK_SKIP: "1"
+steps:
+  - id: git_maintenance
+    command: uv run $HOME/src/dotfiles/config/dagu/scripts/git-maintenance.py

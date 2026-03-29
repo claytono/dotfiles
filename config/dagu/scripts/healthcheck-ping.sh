@@ -11,6 +11,12 @@
 
 set -eu -o pipefail
 
+# Allow DAGs to manage their own healthcheck pings
+if [[ "${HEALTHCHECK_SKIP:-}" == "1" ]]; then
+  echo "Skipping healthcheck ping (HEALTHCHECK_SKIP=1)"
+  exit 0
+fi
+
 HC_HOST="https://hc.k.oneill.net"
 CHECK_NAME="dagu-${DAG_NAME}"
 

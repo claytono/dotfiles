@@ -48,3 +48,13 @@ Dagu logs (useful for debugging):
 Healthcheck secrets are stored in macOS Keychain (bootstrapped via `scripts/bootstrap-secrets --apply`).
 
 Web UI: http://localhost:6767
+
+## Repository Conventions
+
+### `scripts/cleanup`
+
+Repos under `~/src/` may include a `scripts/cleanup` executable. The git maintenance DAG (`config/dagu/dags/cleanup-git.yaml`) runs daily and processes each repo about once per week on a deterministic weekday. Requirements:
+- Must be executable (`chmod +x`)
+- Must be idempotent and safe to run unattended
+- Exit 0 on full success, non-zero otherwise
+- Non-zero exits are tolerated for 7 days before triggering a healthcheck alert
