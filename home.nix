@@ -76,6 +76,9 @@ in {
 
   xdg.configFile."home-manager".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles";
 
+  home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
+  home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
+
   home.packages = with pkgs; [
     argocd
     atool

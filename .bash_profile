@@ -27,7 +27,8 @@ move_to_front() {
 }
 
 pathmunge /usr/local/sbin
-pathmunge $HOME/bin
+pathmunge "$HOME/.local/bin"
+pathmunge "$HOME/bin"
 
 if [ -d /opt/homebrew/bin ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -41,6 +42,11 @@ fi
 VSCODE_BINDIR="/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
 if [ -d "$VSCODE_BINDIR" ]; then
   pathmunge "$VSCODE_BINDIR" after
+fi
+
+OBSIDIAN_BINDIR="/Applications/Obsidian.app/Contents/MacOS"
+if [ -d "$OBSIDIAN_BINDIR" ]; then
+  pathmunge "$OBSIDIAN_BINDIR" after
 fi
 
 if [ -d "${HOME}/.krew/bin" ]; then
@@ -81,12 +87,11 @@ if [ -f ~/.orbstack/shell/init.bash ]; then
   source ~/.orbstack/shell/init.bash
 fi
 # Nix PATH priority - ensure nix binaries come first
-# User profile must be move_to_front'd last so it ends up first in PATH
-if [ -d /nix/var/nix/profiles/default/bin ]; then
-  move_to_front /nix/var/nix/profiles/default/bin
-fi
 if [ -d ~/.nix-profile/bin ]; then
   move_to_front ~/.nix-profile/bin
+fi
+if [ -d /nix/var/nix/profiles/default/bin ]; then
+  move_to_front /nix/var/nix/profiles/default/bin
 fi
 
 # check if this is a login and/or interactive shell
