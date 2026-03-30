@@ -23,8 +23,7 @@ shopt -s histappend
 # Save multi-line commands as one command
 shopt -s cmdhist
 
-# Record each line as it gets issued
-PROMPT_COMMAND='history -a'
+# Note: PROMPT_COMMAND for history is handled by atuin via bash-preexec
 
 # Huge history. Doesn't appear to slow things down, so why not?
 HISTSIZE=500000
@@ -60,7 +59,15 @@ PROMPT_DIRTRIM=3
 
 alias k='kubecolor'
 
-command -v direnv &>/dev/null && eval "$(direnv hook bash)"
+# direnv integration
+if command_exists direnv; then
+  eval "$(direnv hook bash)"
+  # Claude Code runs each command in a new shell, so we need to explicitly
+  # export direnv environment on shell startup (not just on prompt)
+  if [ -n "$CLAUDECODE" ]; then
+    eval "$(DIRENV_LOG_FORMAT= direnv export bash)"
+  fi
+fi
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
