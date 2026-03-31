@@ -1,0 +1,13 @@
+# Start Claude's 5-hour session timer so it expires and resets the
+# usage limit. Runs every 5 hours to keep a session always active.
+# Uses haiku to minimize token cost.
+schedule: "0 1,6,11,16,21 * * *"
+steps:
+  - id: claude_session
+    command: $HOME/src/dotfiles/config/dagu/scripts/start-claude-session.sh claude --model haiku -p "2+2"
+    working_dir: $HOME
+    continue_on:
+      failure: true
+  - id: claude_alt_session
+    command: $HOME/src/dotfiles/config/dagu/scripts/start-claude-session.sh claude-alt --model haiku -p "2+2"
+    working_dir: $HOME

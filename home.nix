@@ -147,7 +147,7 @@ in {
       EnvironmentVariables = {
         HOME = config.home.homeDirectory;
         SHELL = "${pkgs.bash}/bin/bash";
-        PATH = "/nix/var/nix/profiles/default/bin:${config.home.homeDirectory}/.nix-profile/bin:${config.home.homeDirectory}/.orbstack/bin:/usr/bin:/bin:/usr/sbin";
+        PATH = "/usr/bin:/bin:/usr/sbin";
         DAGU_AUTH_MODE = "none";
       };
       KeepAlive = true;
