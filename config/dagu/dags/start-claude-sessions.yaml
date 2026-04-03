@@ -6,8 +6,3 @@ steps:
   - id: claude_session
     command: $HOME/src/dotfiles/config/dagu/scripts/start-claude-session.sh claude --model haiku -p "2+2"
     working_dir: $HOME
-    continue_on:
-      failure: true
-  - id: claude_alt_session
-    command: $HOME/src/dotfiles/config/dagu/scripts/start-claude-session.sh claude-alt --model haiku -p "2+2"
-    working_dir: $HOME
