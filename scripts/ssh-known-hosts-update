@@ -1,0 +1,418 @@
+#!/usr/bin/env python3
+"""Look up a host's SSH keys and update ~/.ssh/known_hosts.
+
+If Tailscale is available, the hostname is matched against Tailscale devices
+(partial, short name, or FQDN) and all name/IP variants are registered.
+Otherwise, falls back to system DNS resolution.
+
+Runs in dry-run mode by default. Pass --apply to make changes.
+"""
+
+import argparse
+import ipaddress
+import json
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+
+def tailscale_lookup(query):
+    """Look up a host in Tailscale. Returns (names, scan_host) or None."""
+    try:
+        result = subprocess.run(
+            ["tailscale", "status", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return None
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    query_lower = query.lower()
+
+    matches = []
+    nodes = [data.get("Self", {})] + list(data.get("Peer", {}).values())
+    for node in nodes:
+        hostname = node.get("HostName", "")
+        dnsname = node.get("DNSName", "").rstrip(".")
+        ips = node.get("TailscaleIPs", [])
+
+        if not hostname or not ips:
+            continue
+
+        query_first_label = query_lower.split(".")[0]
+        if (
+            query_lower == hostname.lower()
+            or query_lower == dnsname.lower()
+            or hostname.lower().startswith(query_lower)
+            or query_lower in hostname.lower()
+            or query_first_label == hostname.lower()
+        ):
+            matches.append(
+                {
+                    "hostname": hostname,
+                    "dnsname": dnsname,
+                    "ips": ips,
+                    "online": node.get("Online", False),
+                }
+            )
+
+    if not matches:
+        return None
+
+    if len(matches) > 1:
+        print("Multiple Tailscale matches found:", file=sys.stderr)
+        for m in matches:
+            status = "online" if m["online"] else "offline"
+            print(f"  {m['hostname']} ({m['dnsname']}) [{status}]", file=sys.stderr)
+        sys.exit(1)
+
+    m = matches[0]
+    ts_hostnames = {m["hostname"]}
+    if m["dnsname"]:
+        ts_hostnames.add(m["dnsname"])
+        short = m["dnsname"].split(".")[0]
+        if short:
+            ts_hostnames.add(short)
+    ts_ips = set(m["ips"])
+
+    # Also resolve via DNS to pick up FQDN and real IPs
+    dns = dns_resolve(m["hostname"], exclude_ips=ts_ips)
+    if dns:
+        dns_hostnames, dns_ips = dns
+        ts_hostnames.update(dns_hostnames)
+        ts_ips.update(dns_ips)
+
+    hostnames = sorted(ts_hostnames)
+    ips = sorted(ts_ips)
+
+    print("Found device:")
+    print(f"  Names: {', '.join(hostnames)}")
+    print(f"  IPs:   {', '.join(ips)}")
+    print()
+
+    # Prefer DNSName for scanning, fall back to hostname or first IP
+    scan_host = m["dnsname"] or m["hostname"] or ips[0]
+    return hostnames + ips, scan_host
+
+
+def get_search_domains():
+    """Get DNS search domains from scutil (macOS) or resolv.conf."""
+    domains = []
+    try:
+        result = subprocess.run(
+            ["scutil", "--dns"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("search domain"):
+                domain = line.split(":")[-1].strip()
+                if domain not in domains:
+                    domains.append(domain)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        try:
+            with open("/etc/resolv.conf") as f:
+                for line in f:
+                    if line.startswith("search "):
+                        for d in line.split()[1:]:
+                            if d not in domains:
+                                domains.append(d)
+        except FileNotFoundError:
+            pass
+    return domains
+
+
+def dns_resolve_one(host):
+    """Resolve a single hostname. Returns (hostnames, ips) or None."""
+    hostnames = {host}
+    ips = set()
+
+    # Try IPv4
+    try:
+        results = socket.getaddrinfo(
+            host,
+            22,
+            socket.AF_INET,
+            socket.SOCK_STREAM,
+            0,
+            socket.AI_CANONNAME,
+        )
+        for result in results:
+            ips.add(result[4][0])
+            if result[3]:
+                hostnames.add(result[3])
+    except socket.gaierror:
+        pass
+
+    # Try IPv6
+    try:
+        results6 = socket.getaddrinfo(host, 22, socket.AF_INET6, socket.SOCK_STREAM)
+        for result in results6:
+            ips.add(result[4][0])
+    except socket.gaierror:
+        pass
+
+    if not ips:
+        return None
+    return hostnames, ips
+
+
+def dns_resolve(host, exclude_ips=None):
+    """Resolve a host via system DNS, trying search domains.
+
+    Returns (hostnames, ips) or None. Tries host.domain for each search
+    domain to find additional variants. If exclude_ips is set, only includes
+    search domain results that resolve to non-excluded addresses.
+    """
+    all_hostnames = set()
+    all_ips = set()
+
+    result = dns_resolve_one(host)
+    if result:
+        all_hostnames.update(result[0])
+        all_ips.update(result[1])
+
+    # Try search domains to find additional name/IP variants
+    for domain in get_search_domains():
+        fqdn = f"{host}.{domain}"
+        if fqdn in all_hostnames:
+            continue
+        result = dns_resolve_one(fqdn)
+        if result:
+            hostnames, ips = result
+            # When exclude_ips is set, only include if it resolves to a non-excluded IP
+            if exclude_ips and not (ips - exclude_ips):
+                continue
+            all_hostnames.update(hostnames)
+            all_ips.update(ips)
+
+    if not all_ips:
+        return None
+    return sorted(all_hostnames), sorted(all_ips)
+
+
+def dns_lookup(host):
+    """Standalone DNS lookup (when tailscale unavailable). Returns (names, scan_host) or None."""
+    resolved = dns_resolve(host)
+    if resolved is None:
+        return None
+
+    hostnames, ips = resolved
+
+    print("Found device (via DNS):")
+    print(f"  Names: {', '.join(hostnames)}")
+    print(f"  IPs:   {', '.join(ips)}")
+    print()
+
+    return hostnames + ips, host
+
+
+def ssh_keyscan(host, fallback_ip=None):
+    """Scan SSH host keys. Returns list of key lines."""
+    for target in [host] + ([fallback_ip] if fallback_ip else []):
+        try:
+            result = subprocess.run(
+                ["ssh-keyscan", "-T", "10", target],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+        except subprocess.TimeoutExpired:
+            continue
+
+        lines = [
+            line
+            for line in result.stdout.splitlines()
+            if line and not line.startswith("#") and "SSH-2.0" not in line
+        ]
+        if lines:
+            return lines
+
+    return []
+
+
+def find_existing_entries(known_hosts, names):
+    """Find which names have entries in known_hosts.
+
+    Returns a dict mapping name -> set of matching known_hosts lines.
+    """
+    found = {}
+    for name in names:
+        result = subprocess.run(
+            ["ssh-keygen", "-F", name, "-f", str(known_hosts)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            lines = {
+                line.strip()
+                for line in result.stdout.splitlines()
+                if line.strip() and not line.startswith("#")
+            }
+            if lines:
+                found[name] = lines
+    return found
+
+
+def remove_entries(known_hosts, names):
+    """Remove known_hosts entries for the given names."""
+    for name in names:
+        result = subprocess.run(
+            ["ssh-keygen", "-F", name, "-f", str(known_hosts)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and any(
+            not line.startswith("#") for line in result.stdout.splitlines()
+        ):
+            subprocess.run(
+                ["ssh-keygen", "-R", name, "-f", str(known_hosts)],
+                capture_output=True,
+                text=True,
+            )
+            print(f"  Removed entries for: {name}")
+
+    # Clean up backup files ssh-keygen creates
+    old = Path(str(known_hosts) + ".old")
+    if old.exists():
+        old.unlink()
+
+
+def build_entries(names, key_lines):
+    """Build known_hosts lines with all name variants per key."""
+    combined = ",".join(names)
+    entries = []
+    seen = set()
+    for line in key_lines:
+        parts = line.split(None, 2)
+        if len(parts) == 3:
+            entry = f"{combined} {parts[1]} {parts[2]}"
+            if entry not in seen:
+                seen.add(entry)
+                entries.append(entry)
+    return entries
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("host", help="Hostname (partial, short name, or FQDN)")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply changes (default is dry-run)",
+    )
+    # Support bare "apply" as first positional arg
+    if len(sys.argv) > 1 and sys.argv[1] == "apply":
+        sys.argv[1] = "--apply"
+
+    args = parser.parse_args()
+
+    known_hosts = Path.home() / ".ssh" / "known_hosts"
+    if not known_hosts.exists():
+        print(f"Error: {known_hosts} not found", file=sys.stderr)
+        sys.exit(1)
+
+    # Resolve host
+    lookup = tailscale_lookup(args.host)
+    if lookup is None:
+        lookup = dns_lookup(args.host)
+    if lookup is None:
+        print(
+            f"Error: Could not resolve '{args.host}' via Tailscale or DNS",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    names, scan_host = lookup
+
+    # Check existing entries
+    print("Checking existing known_hosts entries...")
+    existing = find_existing_entries(known_hosts, names)
+    if existing:
+        for name, lines in existing.items():
+            print(f"  Found {len(lines)} entries for: {name}")
+    else:
+        print("  No existing entries found")
+    print()
+
+    # Scan keys — use first IP as fallback if name-based scan fails
+    print(f"Scanning SSH keys from {scan_host}...")
+
+    def is_ip(s):
+        try:
+            ipaddress.ip_address(s)
+            return True
+        except ValueError:
+            return False
+
+    fallback_ip = next((n for n in names if is_ip(n)), None)
+    key_lines = ssh_keyscan(scan_host, fallback_ip=fallback_ip)
+    if not key_lines:
+        print(
+            "Error: Could not retrieve SSH host keys. Is the host online and running sshd?",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    key_types = sorted(
+        {line.split()[1] for line in key_lines if len(line.split()) >= 2}
+    )
+    print(f"  Found {len(key_lines)} keys: {','.join(key_types)}")
+    print()
+
+    entries = build_entries(names, key_lines)
+
+    # Check if known_hosts already has exactly the right entries and no stale ones
+    existing_lines = set()
+    with open(known_hosts) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                existing_lines.add(line)
+
+    desired = set(entries)
+    has_desired = desired.issubset(existing_lines)
+    # Stale = any existing entry for our names that isn't one of the desired entries
+    all_existing_for_names = set()
+    for lines in existing.values():
+        all_existing_for_names.update(lines)
+    has_stale = bool(all_existing_for_names - desired)
+    if has_desired and not has_stale:
+        print("No changes needed — known_hosts is already up to date.")
+        sys.exit(0)
+
+    if args.apply:
+        print("Applying changes...")
+        remove_entries(known_hosts, names)
+
+        with open(known_hosts, "a") as f:
+            for entry in entries:
+                f.write(entry + "\n")
+        print(f"  Added {len(entries)} new entries")
+        print()
+        print(f"Done. Updated {known_hosts}")
+    else:
+        print("=== DRY RUN (pass --apply to make changes) ===")
+        print()
+        if existing:
+            print("Would remove existing entries for:")
+            for name in existing:
+                print(f"  {name}")
+            print()
+        print("Would add entries:")
+        for entry in entries:
+            print(f"  {entry}")
+
+
+if __name__ == "__main__":
+    main()
