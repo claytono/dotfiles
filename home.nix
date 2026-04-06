@@ -78,6 +78,7 @@ in {
 
   home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
   home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
+  home.file."bin/ssh-known-hosts-update".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/ssh-known-hosts-update";
 
   home.packages = with pkgs; [
     argocd
@@ -115,6 +116,7 @@ in {
     patchutils_0_4_2
     pre-commit
     prettyping
+    python3
     pstree
     pv
     rclone
