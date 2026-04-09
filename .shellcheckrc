@@ -1,0 +1,4 @@
+# SC1090: Can't follow non-constant source - expected in dotfiles
+disable=SC1090
+# SC1091: Not following sourced file - expected in dotfiles
+disable=SC1091

@@ -9,11 +9,13 @@ This is a dotfiles repository managed by YADM. Files in the root are symlinked t
 CLI packages are managed by home-manager via `home.nix`.
 
 To apply changes after editing `home.nix`:
+
 ```bash
 home-manager switch
 ```
 
 To update inputs:
+
 ```bash
 nix flake update
 ```
@@ -21,6 +23,7 @@ nix flake update
 ## Testing Changes
 
 Shell config changes can be tested by sourcing:
+
 ```bash
 source ~/.bash_profile
 ```
@@ -35,6 +38,7 @@ source ~/.bash_profile
 ## Dagu Job Scheduler
 
 Dagu runs as a launchd agent on macOS, configured in `home.nix`. Configuration lives in `config/dagu/`:
+
 - `config.yaml` — server config (paths, queues). Loaded via `--config` flag in the wrapper script.
 - `base.yaml` — shared DAG defaults (retry policy, healthcheck handler). All DAGs inherit these.
 - `dags/` — DAG definitions
@@ -42,18 +46,20 @@ Dagu runs as a launchd agent on macOS, configured in `home.nix`. Configuration l
 - `scripts/healthcheck-ping.sh` — called by the exit handler in base.yaml. Creates healthchecks.io checks on demand and pings success/fail.
 
 Dagu logs (useful for debugging):
+
 - `~/.local/share/dagu/dagu.stdout.log`
 - `~/.local/share/dagu/dagu.stderr.log`
 
 Healthcheck secrets are stored in macOS Keychain (bootstrapped via `scripts/bootstrap-secrets --apply`).
 
-Web UI: http://localhost:6767
+Web UI: <http://localhost:6767>
 
 ## Repository Conventions
 
 ### `scripts/cleanup`
 
 Repos under `~/src/` may include a `scripts/cleanup` executable. The git maintenance DAG (`config/dagu/dags/cleanup-git.yaml`) runs daily and processes each repo about once per week on a deterministic weekday. Requirements:
+
 - Must be executable (`chmod +x`)
 - Must be idempotent and safe to run unattended
 - Exit 0 on full success, non-zero otherwise

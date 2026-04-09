@@ -1,0 +1,58 @@
+---
+name: Build Flake Outputs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-flake-outputs:
+    name: Build flake outputs (${{ matrix.label }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+        - label: home-manager (macos arm64)
+          runs-on: macos-26
+          flake-output: .#homeConfigurations.coneill.activationPackage
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+
+    - name: Check for flake changes
+      if: github.event_name != 'workflow_dispatch'
+      uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+      id: changes
+      with:
+        filters: |
+          flake:
+            - 'flake.nix'
+            - 'flake.lock'
+            - 'home.nix'
+            - '.github/workflows/flake-builds.yaml'
+
+    - name: Install Nix
+      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
+        == 'true'
+      uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe  # v31
+      with:
+        github_access_token: ${{ github.token }}
+
+    - name: Setup Cachix
+      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
+        == 'true'
+      uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c  # v17
+      with:
+        name: claytono
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+    - name: Build
+      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
+        == 'true'
+      run: nix build --print-build-logs --log-format raw --verbose ${{ matrix.flake-output }}

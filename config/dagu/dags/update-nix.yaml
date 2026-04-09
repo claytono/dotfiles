@@ -1,0 +1,19 @@
+---
+schedule: 0 0 * * *
+queue: cleanup
+steps:
+- id: fetch
+  command: git -C $HOME/src/dotfiles fetch origin main
+
+- id: switch
+  script: |-
+    set -e
+    WORKTREE=/tmp/dotfiles-nix-update
+    cleanup() {
+      rm -rf "$WORKTREE"
+      git -C "$HOME/src/dotfiles" worktree prune
+    }
+    trap cleanup EXIT
+    rm -rf "$WORKTREE"
+    git -C "$HOME/src/dotfiles" worktree add "$WORKTREE" origin/main
+    home-manager switch --flake "$WORKTREE"
