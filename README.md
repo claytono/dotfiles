@@ -13,11 +13,13 @@ Personal dotfiles managed with [YADM](https://yadm.io/) and [Nix](https://nixos.
 ### New Machine
 
 1. Install Nix using the [Determinate Systems installer](https://determinate.systems/nix-installer/):
+
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
    ```
 
 2. Clone dotfiles with YADM:
+
    ```bash
    nix run nixpkgs#yadm -- clone https://github.com/claytono/dotfiles.git
    ```
@@ -25,6 +27,7 @@ Personal dotfiles managed with [YADM](https://yadm.io/) and [Nix](https://nixos.
    This will prompt to run bootstrap, which installs Homebrew and runs `brew bundle`.
 
 3. Activate home-manager configuration:
+
    ```bash
    cd ~/src/dotfiles
    nix run home-manager/master -- switch --flake .
@@ -40,6 +43,7 @@ Personal dotfiles managed with [YADM](https://yadm.io/) and [Nix](https://nixos.
 ### Updating Packages
 
 Update flake inputs and rebuild:
+
 ```bash
 cd ~/src/dotfiles
 nix flake update
@@ -49,6 +53,7 @@ home-manager switch
 ### Adding New Packages
 
 Edit `home.nix` to add packages, then:
+
 ```bash
 home-manager switch
 ```
@@ -57,27 +62,30 @@ home-manager switch
 
 GUI apps and some CLI tools are managed via `.Brewfile`.
 
-### Updating Packages
+### Updating Homebrew Packages
 
 ```bash
 brew bundle --global
 ```
 
-### Adding New Packages
+### Adding Homebrew Packages
 
 Edit `.Brewfile` to add packages or casks, then run `brew bundle --global`.
 
 ## What's Included
 
 ### Shell Configuration
+
 - `.bash_profile` - PATH setup, shell environment
 - `.bashrc` - Interactive shell config, prompt, aliases
 
 ### Git Configuration
+
 - `.gitconfig` - Machine-specific git config (includes common)
 - `.gitconfig-common` - Shared git settings
 
 ### Other
+
 - `.tmux.conf` - tmux configuration
 - `.vimrc` - vim configuration
 - `.Brewfile` - Homebrew packages and casks

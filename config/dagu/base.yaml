@@ -1,5 +1,6 @@
+---
 max_active_steps: 10
-catchup_window: "6h"
+catchup_window: 6h
 
 handler_on:
   exit:

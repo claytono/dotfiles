@@ -1,0 +1,57 @@
+---
+# Auto-generated from flake.lock — do not edit
+# Regenerate with: scripts/gen-flake-versions
+
+argocd: 3.1.9
+atool: 0.39.0
+atuin: 18.10.0
+bash-completion: 2.17.0
+bash-interactive: 5.3p3
+bun: 1.3.5
+cachix: 1.9.1
+codeowners: 1.2.1
+codex: 0.73.0
+curl: 8.17.0
+dagu: 2.3.8
+direnv: 2.37.1
+du-dust: 1.2.3
+fd: 10.3.0
+ffmpeg: '8.0'
+fzf: 0.67.0
+gh: 2.83.2
+git: 2.51.2
+git-crypt: 0.8.0
+htop: 3.4.1
+jq: 1.8.1
+k9s: 0.50.16
+kubecolor: 0.5.3
+kubectl: 1.34.3
+kubectx: 0.9.5
+kubernetes-helm: 3.19.1
+lftp: 4.9.3
+lsd: 1.2.0
+man-db: 2.13.1
+mtr: '0.96'
+nix-search-cli: 0.2-unstable-2024-09-24
+nmap: '7.98'
+nodejs: 24.12.0
+p7zip: '17.06'
+patchutils: 0.4.2
+pre-commit: 4.5.1
+prettyping: 1.1.0
+pstree: '2.39'
+pv: 1.10.2
+rclone: 1.72.1
+restic: 0.18.1
+ripgrep: 15.1.0
+socat: 1.8.0.3
+timer: 1.4.6
+tmux: 3.6a
+todoist: 0.22.0
+uv: 0.9.18
+vim: 9.1.1869
+wget: 1.25.0
+xz: 5.8.1
+yadm: 3.5.0
+yq-go: 4.50.1
+yt-dlp: 2025.12.08

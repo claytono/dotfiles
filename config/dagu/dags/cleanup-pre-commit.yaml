@@ -1,5 +1,6 @@
-schedule: "0 4 * * 0"
+---
+schedule: 0 4 * * 0
 queue: cleanup
 steps:
-  - id: gc
-    command: pre-commit gc
+- id: gc
+  command: pre-commit gc
