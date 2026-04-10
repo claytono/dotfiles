@@ -41,6 +41,7 @@ pre-commit: 4.5.1
 prettyping: 1.1.0
 pstree: '2.39'
 pv: 1.10.5
+python3: 3.13.12
 rclone: 1.73.4
 restic: 0.18.1
 ripgrep: 15.1.0
