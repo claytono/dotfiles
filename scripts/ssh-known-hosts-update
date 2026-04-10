@@ -113,13 +113,16 @@ def get_search_domains():
             text=True,
             timeout=5,
         )
-        for line in result.stdout.splitlines():
-            line = line.strip()
-            if line.startswith("search domain"):
-                domain = line.split(":")[-1].strip()
-                if domain not in domains:
-                    domains.append(domain)
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line.startswith("search domain"):
+                    domain = line.split(":")[-1].strip()
+                    if domain and domain not in domains:
+                        domains.append(domain)
     except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    if not domains:
         try:
             with open("/etc/resolv.conf") as f:
                 for line in f:
@@ -156,9 +159,13 @@ def dns_resolve_one(host):
 
     # Try IPv6
     try:
-        results6 = socket.getaddrinfo(host, 22, socket.AF_INET6, socket.SOCK_STREAM)
+        results6 = socket.getaddrinfo(
+            host, 22, socket.AF_INET6, socket.SOCK_STREAM, 0, socket.AI_CANONNAME
+        )
         for result in results6:
             ips.add(result[4][0])
+            if result[3]:
+                hostnames.add(result[3])
     except socket.gaierror:
         pass
 
@@ -183,10 +190,12 @@ def dns_resolve(host, exclude_ips=None):
         all_ips.update(result[1])
 
     # Try search domains to find additional name/IP variants
+    tried = {host}
     for domain in get_search_domains():
         fqdn = f"{host}.{domain}"
-        if fqdn in all_hostnames:
+        if fqdn in tried:
             continue
+        tried.add(fqdn)
         result = dns_resolve_one(fqdn)
         if result:
             hostnames, ips = result
