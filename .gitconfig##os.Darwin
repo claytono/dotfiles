@@ -1,8 +1,0 @@
-[commit]
-	gpgSign = true
-
-[credential]
-	helper = osxkeychain
-
-[include]
-  path = ~/.gitconfig-common

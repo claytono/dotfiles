@@ -1,5 +1,4 @@
 ---
-type: graph
 schedule: 0 2 * * 0
 queue: cleanup
 steps:
@@ -16,5 +15,4 @@ steps:
   command: docker network prune -f
 
 - id: prune_old_images
-  depends: [prune_containers]
   command: docker image prune -a -f --filter "until=720h"
