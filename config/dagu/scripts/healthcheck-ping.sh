@@ -37,11 +37,15 @@ if [[ -z "${DAGU_HEALTHCHECK_PING_KEY:-}" ]]; then
   exit 1
 fi
 
+# Build ping body with link to dagu run
+DAGU_URL="http://localhost:6767/dags/${DAG_NAME}?dagRunId=${DAG_RUN_ID:-}"
+PING_BODY="Run: ${DAGU_URL}"
+
 case "${DAG_RUN_STATUS:-}" in
   succeeded)
-    curl -fsS -m 10 --retry 5 -o /dev/null "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}"
+    curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "${PING_BODY}" "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}"
     ;;
   *)
-    curl -fsS -m 10 --retry 5 -o /dev/null "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}/fail"
+    curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "${PING_BODY}" "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}/fail"
     ;;
 esac

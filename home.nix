@@ -74,6 +74,49 @@ in {
 
   programs.home-manager.enable = true;
 
+  programs.git = {
+    enable = true;
+
+    signing = {
+      key = "clayton@oneill.net";
+      signByDefault = pkgs.stdenv.isDarwin;
+      format = "openpgp";
+    };
+
+    settings = {
+      user = {
+        name = "Clayton O'Neill";
+        email = "clayton@oneill.net";
+      };
+      alias = {
+        lg = "log --oneline --graph --all --decorate --abbrev-commit";
+      };
+      color = {
+        diff = "auto";
+        status = "auto";
+        branch = "auto";
+        ui = "auto";
+      };
+      core.excludesfile = "~/.gitignore";
+      branch.autosetuprebase = "always";
+      log = {
+        decorate = true;
+        mailmap = true;
+      };
+      github.user = "claytono";
+      protocol.version = 2;
+      push = {
+        default = "current";
+        autoSetupRemote = true;
+      };
+      init.defaultBranch = "main";
+      pull.rebase = true;
+      "url \"git@github.com:\"".pushInsteadOf = "https://github.com/";
+    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+      credential.helper = "osxkeychain";
+    };
+  };
+
   xdg.configFile."home-manager".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles";
 
   home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
@@ -97,7 +140,6 @@ in {
     ffmpeg
     fzf
     gh
-    git
     git-crypt
     kubernetes-helm
     htop

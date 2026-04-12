@@ -3,7 +3,8 @@ schedule: 0 0 * * *
 queue: cleanup
 steps:
 - id: fetch
-  command: git -C $HOME/src/dotfiles fetch origin main
+  command: git -C $HOME/src/dotfiles fetch https://github.com/claytono/dotfiles.git
+    main:refs/remotes/origin/main
 
 - id: switch
   script: |-
