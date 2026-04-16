@@ -44,17 +44,42 @@ pc_lblue="\[$(tput setaf 12)\]"
 pc_lred="\[$(tput setaf 9)\]"
 pc_reset="\[$(tput sgr0)\]"
 
-# inline flake name
-flake_segment='${FLAKE_NAME:+${FLAKE_NAME}❄️}'
+prompt_flake_segment() {
+  if [ -n "${FLAKE_NAME:-}" ]; then
+    printf '%s❄️' "$FLAKE_NAME"
+  fi
+}
 
-# inline conditional user (shown if not coneill, claytono, or codespace)
-user_segment='$( [[ $USER != "coneill" && $USER != "claytono" && $USER != "codespace" ]] && echo "'$pc_lred'\u'$pc_reset'@" )'
+prompt_show_user() {
+  case "$USER" in
+    coneill | claytono | codespace) return 1 ;;
+    *) return 0 ;;
+  esac
+}
 
-# inline git branch
-git_branch_segment='$(b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); [[ -n "$b" ]] && echo "'$pc_lred' ($b)'$pc_reset'")'
+prompt_user_name() {
+  if prompt_show_user; then
+    printf '%s' "$USER"
+  fi
+}
+
+prompt_user_suffix() {
+  if prompt_show_user; then
+    printf '@'
+  fi
+}
+
+prompt_git_branch_segment() {
+  local branch
+
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return
+  if [ -n "$branch" ]; then
+    printf ' (%s)' "$branch"
+  fi
+}
 
 # final prompt string
-PS1="$flake_segment$user_segment${pc_lgreen}\h${pc_reset}:${pc_lblue}\w${pc_reset}$git_branch_segment\$ "
+PS1="\$(prompt_flake_segment)${pc_lred}\$(prompt_user_name)${pc_reset}\$(prompt_user_suffix)${pc_lgreen}\h${pc_reset}:${pc_lblue}\w${pc_reset}${pc_lred}\$(prompt_git_branch_segment)${pc_reset}\\\$ "
 PROMPT_DIRTRIM=3
 
 alias k='kubecolor'
@@ -62,10 +87,10 @@ alias k='kubecolor'
 # direnv integration
 if command_exists direnv; then
   eval "$(direnv hook bash)"
-  # Claude Code runs each command in a new shell, so we need to explicitly
+  # Claude Code and Codex run each command in a new shell, so we need to explicitly
   # export direnv environment on shell startup (not just on prompt)
-  if [ -n "$CLAUDECODE" ]; then
-    eval "$(DIRENV_LOG_FORMAT= direnv export bash)"
+  if [ -n "$CLAUDECODE" ] || [ -n "$CODEX_SHELL" ]; then
+    eval "$(DIRENV_LOG_FORMAT='' direnv export bash)"
   fi
 fi
 
