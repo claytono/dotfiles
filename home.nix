@@ -136,6 +136,7 @@ in {
     codex
     curl
     direnv
+    diskus
     fd
     ffmpeg
     fzf
