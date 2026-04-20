@@ -22,13 +22,13 @@ fzf: 0.71.0
 gh: 2.89.0
 git: 2.53.0
 git-crypt: 0.8.0
-htop: 3.4.1
+htop: 3.5.0
 jq: 1.8.1
 k9s: 0.50.18
-kubecolor: 0.5.3
+kubecolor: 0.6.0
 kubectl: 1.35.3
 kubectx: 0.11.0
-kubernetes-helm: 3.19.1
+kubernetes-helm: 3.20.1
 lftp: 4.9.3
 lsd: 1.2.0
 man-db: 2.13.1
@@ -51,7 +51,7 @@ timer: 1.4.6
 tmux: 3.6a
 todoist: 0.23.0
 uv: 0.11.6
-vim: 9.2.0106
+vim: 9.2.0340
 wget: 1.25.0
 xz: 5.8.2
 yadm: 3.5.0
