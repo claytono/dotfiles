@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, codexPkgs, ... }:
 
 let
   # Custom package to include only the watch binary from procps on macOS
@@ -133,7 +133,7 @@ in {
     dust
     cachix
     codeowners
-    codex
+    codexPkgs.codex
     curl
     direnv
     diskus
