@@ -120,6 +120,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-codex": {
+      "locked": {
+        "lastModified": 1776639730,
+        "narHash": "sha256-5O6lBzK9pUIrAo923v5lN+H+ppdz/+Izo1X54dcgWh8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "440aeee3b7e60edbf9ea7b56a4324449fa37ba27",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "master",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-lib": {
       "locked": {
         "lastModified": 1761765539,
@@ -172,6 +188,7 @@
         "home-manager": "home-manager",
         "nix-search-cli": "nix-search-cli",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-codex": "nixpkgs-codex",
         "strace-macos": "strace-macos"
       }
     },
