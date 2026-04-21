@@ -1,0 +1,10 @@
+---
+# Start Codex's 5-hour session timer so it expires and resets the
+# usage limit. Runs every 5 hours to keep a session always active.
+# Uses the default Codex model from ~/.codex/config.toml.
+schedule: 0 1,6,11,16,21 * * *
+steps:
+- id: codex_session
+  command: $HOME/src/dotfiles/config/dagu/scripts/start-codex-session.sh codex exec
+    --ephemeral "2+2"
+  working_dir: $HOME
