@@ -15,7 +15,7 @@ permissions:
 jobs:
   fix-linting:
     name: Fix Linting Issues
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     if: github.actor == 'renovate[bot]'
 
     steps:
@@ -28,9 +28,7 @@ jobs:
         ref: ${{ github.event.pull_request.head.ref }}
 
     - name: Install Nix
-      uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe  # v31
-      with:
-        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      uses: DeterminateSystems/determinate-nix-action@73327eb48f028efaaf5013656ba216ca3cdeca7b  # v3.16.3
 
     - name: Setup Cachix
       uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c  # v17
@@ -43,6 +41,20 @@ jobs:
       with:
         path: ~/.cache/pre-commit
         key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+    - name: Refresh flake artifacts for changed inputs
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+
+        if ! git diff --name-only "$BASE_SHA"...HEAD | grep -qx 'flake.nix'; then
+          echo "No flake.nix changes"
+          exit 0
+        fi
+
+        ./scripts/refresh-flake-inputs --base-ref "$BASE_SHA"
+        nix develop --command ./scripts/gen-flake-versions
 
     - name: Run pre-commit hooks on changed files
       run: |
@@ -66,12 +78,14 @@ jobs:
       env:
         BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
       run: |-
+        set -euo pipefail
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add .
-        git commit -m "Fix linting issues
+        mapfile -t changed_files < <(git diff --name-only)
+        git add -- "${changed_files[@]}"
+        git commit -m "Apply Renovate PR fixes
 
-        Auto-fixed by pre-commit hooks"
+        Refresh flake artifacts when needed and apply pre-commit fixes."
 
         echo "Pushing fixes to branch: $BRANCH_NAME"
         git push "https://x-access-token:${{ secrets.PAT }}@github.com/${{ github.repository }}" "HEAD:$BRANCH_NAME"

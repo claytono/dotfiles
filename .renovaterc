@@ -18,6 +18,20 @@
   "pre-commit": {
     "enabled": true
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^flake\\.nix$/"
+      ],
+      "matchStrings": [
+        "codex\\.url = \"github:openai/codex\\?ref=(?<currentValue>rust-v\\d+\\.\\d+\\.\\d+)\";"
+      ],
+      "depNameTemplate": "openai/codex",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "regex:^rust-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    }
+  ],
   "packageRules": [
     {
       "matchManagers": [

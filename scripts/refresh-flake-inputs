@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""Refresh flake inputs, then rebuild and auto-fix hash mismatches."""
+
+import argparse
+import io
+import json
+import shlex
+import shutil
+import subprocess
+import tarfile
+import tempfile
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_BUILD_TARGET = ".#homeConfigurations.coneill.activationPackage"
+DEFAULT_FIX_HASHES_COMMAND = "determinate-nixd fix hashes --auto-apply"
+
+
+def run(
+    *args: str,
+    cwd: Path = REPO_ROOT,
+    capture_output: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=cwd,
+        check=True,
+        text=True,
+        capture_output=capture_output,
+    )
+
+
+def metadata(path: Path) -> dict:
+    result = run("nix", "flake", "metadata", "--json", str(path), capture_output=True)
+    return json.loads(result.stdout)
+
+
+def top_level_inputs(meta: dict) -> dict[str, dict]:
+    nodes = meta["locks"]["nodes"]
+    root_inputs = nodes["root"]["inputs"]
+    return {
+        name: {
+            "node": root_inputs[name],
+            "original": nodes[root_inputs[name]].get("original"),
+        }
+        for name in sorted(root_inputs)
+    }
+
+
+def snapshot(ref: str) -> Path:
+    tempdir = Path(tempfile.mkdtemp(prefix="flake-inputs-"))
+    archive = subprocess.run(
+        ["git", "archive", "--format=tar", ref],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+    )
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tf:
+        tf.extractall(tempdir, filter="data")
+    return tempdir
+
+
+def changed_inputs(base_ref: str) -> tuple[dict[str, dict], list[str]]:
+    current = top_level_inputs(metadata(REPO_ROOT))
+    base_dir = snapshot(base_ref)
+    try:
+        base = top_level_inputs(metadata(base_dir))
+    finally:
+        shutil.rmtree(base_dir)
+
+    changed = []
+    for name, current_info in current.items():
+        base_info = base.get(name)
+        if base_info is None or base_info["original"] != current_info["original"]:
+            changed.append(name)
+    return current, changed
+
+
+def print_inputs(current: dict[str, dict], changed: set[str]) -> None:
+    for name in current:
+        suffix = " changed" if name in changed else ""
+        print(f"{name}{suffix}")
+
+
+def resolve_inputs(
+    *,
+    available: dict[str, dict],
+    changed: list[str],
+    selected: list[str],
+    update_all: bool,
+    base_ref: str | None,
+) -> list[str]:
+    if update_all:
+        return list(available.keys())
+
+    if selected:
+        unknown = [name for name in selected if name not in available]
+        if unknown:
+            raise SystemExit(f"Unknown flake inputs: {', '.join(unknown)}")
+        return selected
+
+    if base_ref is not None:
+        return changed
+
+    raise SystemExit("Specify input names, --all, or --base-ref")
+
+
+def hash_fix_command(command: str) -> list[str]:
+    return shlex.split(command)
+
+
+def ensure_hash_fixer(command: str) -> None:
+    binary = hash_fix_command(command)[0]
+    if shutil.which(binary):
+        return
+    raise SystemExit(
+        f"Hash fixer '{binary}' is not on PATH. "
+        f"Set --fix-hashes-command or install it before running updates."
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "inputs", nargs="*", help="Specific top-level flake inputs to update"
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Update all top-level flake inputs",
+    )
+    parser.add_argument(
+        "--base-ref",
+        help="Detect changed top-level inputs by comparing against this git ref",
+    )
+    parser.add_argument(
+        "--build-target",
+        default=DEFAULT_BUILD_TARGET,
+        help=f"Flake target to build after updating inputs (default: {DEFAULT_BUILD_TARGET})",
+    )
+    parser.add_argument(
+        "--fix-hashes-command",
+        default=DEFAULT_FIX_HASHES_COMMAND,
+        help=f"Command to run when the build fails (default: {DEFAULT_FIX_HASHES_COMMAND!r})",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the planned updates and commands without mutating anything",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List top-level inputs, marking detected changes when --base-ref is set",
+    )
+    args = parser.parse_args()
+
+    if args.all and args.inputs:
+        raise SystemExit("Pass input names or --all, not both")
+
+    current = top_level_inputs(metadata(REPO_ROOT))
+    changed = []
+    if args.base_ref is not None:
+        current, changed = changed_inputs(args.base_ref)
+
+    if args.list:
+        print_inputs(current, set(changed))
+        return 0
+
+    selected = resolve_inputs(
+        available=current,
+        changed=changed,
+        selected=args.inputs,
+        update_all=args.all,
+        base_ref=args.base_ref,
+    )
+
+    if not selected:
+        print("No flake inputs selected")
+        return 0
+
+    print("Selected inputs:")
+    for name in selected:
+        print(f"- {name}")
+
+    if args.dry_run:
+        for name in selected:
+            print(f"would run: nix flake update {name}")
+        print(f"would run: nix build --no-link --print-build-logs {args.build_target}")
+        print(f"would run on build failure: {args.fix_hashes_command}")
+        print(
+            f"would rerun: nix build --no-link --print-build-logs {args.build_target}"
+        )
+        return 0
+
+    ensure_hash_fixer(args.fix_hashes_command)
+
+    for name in selected:
+        run("nix", "flake", "update", name)
+
+    build_status = subprocess.run(
+        ["nix", "build", "--no-link", "--print-build-logs", args.build_target],
+        cwd=REPO_ROOT,
+        text=True,
+    ).returncode
+    if build_status == 0:
+        return 0
+
+    run(*hash_fix_command(args.fix_hashes_command))
+    run("nix", "build", "--no-link", "--print-build-logs", args.build_target)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
