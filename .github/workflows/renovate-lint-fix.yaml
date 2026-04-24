@@ -8,6 +8,10 @@ on:
     - synchronize
     - reopened
 
+concurrency:
+  group: ${{ github.workflow }}-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -16,7 +20,7 @@ jobs:
   fix-linting:
     name: Fix Linting Issues
     runs-on: macos-26
-    if: github.actor == 'renovate[bot]'
+    if: github.event.pull_request.user.login == 'renovate[bot]'
 
     steps:
     - name: Checkout repository
