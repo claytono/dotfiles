@@ -184,4 +184,3 @@ if macos?
   end
 
 end
-
