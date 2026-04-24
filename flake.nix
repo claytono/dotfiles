@@ -69,7 +69,7 @@
           src = codexSource;
           sourceRoot = "source/codex-rs";
 
-          cargoHash = "sha256-2qtMLWSdYWJ+blNfCHXtgmzizuM1HgpTGa5RQ3U/AEM=";
+          cargoHash = "sha256-tuUY+Mg7DwYnYLt1zfqo0rrz5ip0fukxj947yBJAyks=";
 
           cargoBuildFlags = [
             "--package"

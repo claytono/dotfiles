@@ -14,7 +14,10 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-STATE_FILE = Path(os.environ.get("GIT_MAINT_STATE_FILE") or (Path.home() / ".local/share/dagu/git-maintenance.json"))
+STATE_FILE = Path(
+    os.environ.get("GIT_MAINT_STATE_FILE")
+    or (Path.home() / ".local/share/dagu/git-maintenance.json")
+)
 SRC_DIR = Path(os.environ.get("GIT_MAINT_SRC_DIR") or (Path.home() / "src"))
 HC_HOST = "https://hc.k.oneill.net"
 CHECK_NAME = "dagu-cleanup-git"
@@ -58,7 +61,10 @@ def load_state() -> dict:
         try:
             return json.loads(STATE_FILE.read_text())
         except json.JSONDecodeError:
-            print(f"WARNING: corrupt state file {STATE_FILE}, starting fresh", file=sys.stderr)
+            print(
+                f"WARNING: corrupt state file {STATE_FILE}, starting fresh",
+                file=sys.stderr,
+            )
     return {"repos": {}}
 
 
@@ -86,7 +92,13 @@ def discover_repos() -> list[Path]:
     return repos
 
 
-def is_due(repo_name: str, repo_state: dict, today_weekday: int, current_time: datetime, force: bool) -> bool:
+def is_due(
+    repo_name: str,
+    repo_state: dict,
+    today_weekday: int,
+    current_time: datetime,
+    force: bool,
+) -> bool:
     if force:
         return True
     last_success = repo_state.get("last_gc_success")
@@ -141,20 +153,31 @@ def ping_healthchecks(report: str, failed: bool) -> None:
         return
 
     # Create check if it doesn't exist (idempotent)
-    create_payload = json.dumps({
-        "api_key": api_key,
-        "name": CHECK_NAME,
-        "timeout": 604800,
-        "grace": 86400,
-        "tags": "dagu",
-        "channels": "*",
-        "unique": ["name"],
-    })
+    create_payload = json.dumps(
+        {
+            "api_key": api_key,
+            "name": CHECK_NAME,
+            "timeout": 604800,
+            "grace": 86400,
+            "tags": "dagu",
+            "channels": "*",
+            "unique": ["name"],
+        }
+    )
     subprocess.run(
-        ["curl", "-sf", "-m", "10", "--retry", "3",
-         f"{HC_HOST}/api/v1/checks/",
-         "--data-binary", "@-",
-         "-H", "Content-Type: application/json"],
+        [
+            "curl",
+            "-sf",
+            "-m",
+            "10",
+            "--retry",
+            "3",
+            f"{HC_HOST}/api/v1/checks/",
+            "--data-binary",
+            "@-",
+            "-H",
+            "Content-Type: application/json",
+        ],
         input=create_payload,
         capture_output=True,
         text=True,
@@ -164,8 +187,19 @@ def ping_healthchecks(report: str, failed: bool) -> None:
     suffix = "/fail" if failed else ""
     url = f"{HC_HOST}/ping/{ping_key}/{CHECK_NAME}{suffix}"
     subprocess.run(
-        ["curl", "-fsS", "-m", "10", "--retry", "5", "-o", "/dev/null",
-         "--data-binary", "@-", url],
+        [
+            "curl",
+            "-fsS",
+            "-m",
+            "10",
+            "--retry",
+            "5",
+            "-o",
+            "/dev/null",
+            "--data-binary",
+            "@-",
+            url,
+        ],
         input=report,
         text=True,
     )
@@ -173,7 +207,9 @@ def ping_healthchecks(report: str, failed: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Git repo maintenance")
-    parser.add_argument("--force", action="store_true", help="Process all repos regardless of schedule")
+    parser.add_argument(
+        "--force", action="store_true", help="Process all repos regardless of schedule"
+    )
     args = parser.parse_args()
 
     state = load_state()
@@ -207,7 +243,9 @@ def main() -> None:
             if is_first_run and not args.force:
                 # Stagger timestamp so repos come due on different weekdays
                 assigned = repo_weekday(name)
-                repo_state["last_gc_success"] = iso(staggered_timestamp(assigned, current_time))
+                repo_state["last_gc_success"] = iso(
+                    staggered_timestamp(assigned, current_time)
+                )
             else:
                 repo_state["last_gc_success"] = iso(current_time)
             report_lines.append("  git gc: OK")
@@ -231,9 +269,13 @@ def main() -> None:
                 days_failing = (current_time - first_fail).days
                 if days_failing >= CLEANUP_GRACE_DAYS:
                     cleanup_escalations.append(f"{name} (failing {days_failing}d)")
-                    report_lines.append(f"  scripts/cleanup: FAILED (escalated, {days_failing}d)\n{cleanup_output}")
+                    report_lines.append(
+                        f"  scripts/cleanup: FAILED (escalated, {days_failing}d)\n{cleanup_output}"
+                    )
                 else:
-                    report_lines.append(f"  scripts/cleanup: FAILED (grace, {days_failing}d/{CLEANUP_GRACE_DAYS}d)\n{cleanup_output}")
+                    report_lines.append(
+                        f"  scripts/cleanup: FAILED (grace, {days_failing}d/{CLEANUP_GRACE_DAYS}d)\n{cleanup_output}"
+                    )
 
     # Summary
     report_lines.append("")
@@ -261,7 +303,10 @@ def main() -> None:
         if gc_failures:
             print(f"\nGC failures: {', '.join(gc_failures)}", file=sys.stderr)
         if cleanup_escalations:
-            print(f"\nCleanup escalations: {', '.join(cleanup_escalations)}", file=sys.stderr)
+            print(
+                f"\nCleanup escalations: {', '.join(cleanup_escalations)}",
+                file=sys.stderr,
+            )
         sys.exit(1)
 
 
