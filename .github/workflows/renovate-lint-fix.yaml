@@ -31,41 +31,60 @@ jobs:
         persist-credentials: false
         ref: ${{ github.event.pull_request.head.ref }}
 
+    - name: Check for relevant changes
+      uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+      id: changes
+      with:
+        filters: |
+          flake_input:
+            - 'flake.nix'
+          lintable:
+            - 'flake.nix'
+            - 'flake.lock'
+            - 'home.nix'
+            - '.github/workflows/**'
+            - '.pre-commit-config.yaml'
+
     - name: Install Nix
+      if: steps.changes.outputs.lintable == 'true'
       uses: DeterminateSystems/determinate-nix-action@73327eb48f028efaaf5013656ba216ca3cdeca7b  # v3.16.3
 
     - name: Setup Cachix
+      if: steps.changes.outputs.lintable == 'true'
       uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c  # v17
       with:
         name: claytono
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
     - name: Cache pre-commit
+      if: steps.changes.outputs.lintable == 'true'
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5
       with:
         path: ~/.cache/pre-commit
         key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
 
+    - name: No relevant changes
+      if: steps.changes.outputs.lintable != 'true'
+      run: echo "No lint-fixable changes in this PR"
+
     - name: Refresh flake artifacts for changed inputs
+      if: steps.changes.outputs.flake_input == 'true'
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
         set -euo pipefail
 
-        if ! git diff --name-only "$BASE_SHA"...HEAD | grep -qx 'flake.nix'; then
-          echo "No flake.nix changes"
-          exit 0
-        fi
-
         ./scripts/refresh-flake-inputs --base-ref "$BASE_SHA"
         nix develop --command ./scripts/gen-flake-versions
 
     - name: Run pre-commit hooks on changed files
+      if: steps.changes.outputs.lintable == 'true'
       run: |
         # Run pre-commit hooks and capture the exit code
         nix develop --command pre-commit run --all-files || true
 
     - name: Check for changes
+      if: steps.changes.outputs.lintable == 'true'
       id: check-changes
       run: |
         if ! git diff --quiet; then
@@ -78,7 +97,8 @@ jobs:
         fi
 
     - name: Commit and push fixes
-      if: steps.check-changes.outputs.changes == 'true'
+      if: steps.changes.outputs.lintable == 'true' && steps.check-changes.outputs.changes
+        == 'true'
       env:
         BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
       run: |-
