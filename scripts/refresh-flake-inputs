@@ -2,6 +2,7 @@
 """Refresh flake inputs, then rebuild and auto-fix hash mismatches."""
 
 import argparse
+import difflib
 import io
 import json
 import shlex
@@ -14,6 +15,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BUILD_TARGET = ".#homeConfigurations.coneill.activationPackage"
 DEFAULT_FIX_HASHES_COMMAND = "determinate-nixd fix hashes --auto-apply"
+FALLBACK_FIX_HASHES_COMMAND = (
+    "nix run github:DeterminateSystems/determinate -- fix hashes --auto-apply"
+)
+IGNORED_TREE_NAMES = frozenset({".git", ".beads", "__pycache__", "result"})
+COPY_IGNORE = shutil.ignore_patterns(*sorted(IGNORED_TREE_NAMES))
 
 
 def run(
@@ -28,6 +34,12 @@ def run(
         text=True,
         capture_output=capture_output,
     )
+
+
+def default_fix_hashes_command() -> str:
+    if shutil.which("determinate-nixd"):
+        return DEFAULT_FIX_HASHES_COMMAND
+    return FALLBACK_FIX_HASHES_COMMAND
 
 
 def metadata(path: Path) -> dict:
@@ -109,14 +121,117 @@ def hash_fix_command(command: str) -> list[str]:
     return shlex.split(command)
 
 
-def ensure_hash_fixer(command: str) -> None:
-    binary = hash_fix_command(command)[0]
-    if shutil.which(binary):
+def ignored_path(path: Path) -> bool:
+    return any(part in IGNORED_TREE_NAMES for part in path.parts)
+
+
+def working_tree_copy() -> Path:
+    tempdir = Path(tempfile.mkdtemp(prefix="flake-refresh-"))
+    copy_root = tempdir / "repo"
+    try:
+        shutil.copytree(REPO_ROOT, copy_root, symlinks=True, ignore=COPY_IGNORE)
+    except Exception:
+        shutil.rmtree(tempdir, ignore_errors=True)
+        raise
+    return copy_root
+
+
+def run_hash_fixer(command: str, *, cwd: Path) -> None:
+    command_args = hash_fix_command(command)
+    if not command_args:
+        raise SystemExit("--fix-hashes-command must not be empty")
+
+    binary = command_args[0]
+    if shutil.which(binary) is None:
+        raise SystemExit(
+            f"Hash fixer '{binary}' is not on PATH. "
+            "Set --fix-hashes-command or install it before running updates."
+        )
+
+    run(*command_args, cwd=cwd)
+
+
+def run_refresh(
+    *,
+    cwd: Path,
+    selected: list[str],
+    build_target: str,
+    fix_hashes_command: str,
+) -> None:
+    for name in selected:
+        run("nix", "flake", "update", name, cwd=cwd)
+
+    build_status = subprocess.run(
+        ["nix", "build", "--no-link", "--print-build-logs", build_target],
+        cwd=cwd,
+        text=True,
+    ).returncode
+    if build_status == 0:
         return
-    raise SystemExit(
-        f"Hash fixer '{binary}' is not on PATH. "
-        f"Set --fix-hashes-command or install it before running updates."
-    )
+
+    run_hash_fixer(fix_hashes_command, cwd=cwd)
+    run("nix", "build", "--no-link", "--print-build-logs", build_target, cwd=cwd)
+
+
+def relative_files(root: Path) -> dict[Path, Path]:
+    files: dict[Path, Path] = {}
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root)
+        if ignored_path(rel):
+            continue
+        files[rel] = path
+    return files
+
+
+def read_text_if_possible(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8", errors="surrogateescape")
+    except OSError:
+        return None
+
+
+def print_diff(before: Path, after: Path) -> None:
+    before_files = relative_files(before)
+    after_files = relative_files(after)
+    changed = sorted(set(before_files) | set(after_files))
+    diff_found = False
+
+    for rel in changed:
+        before_path = before_files.get(rel)
+        after_path = after_files.get(rel)
+        if before_path is None:
+            print(f"would add: {rel}")
+            diff_found = True
+            continue
+        if after_path is None:
+            print(f"would remove: {rel}")
+            diff_found = True
+            continue
+
+        before_text = read_text_if_possible(before_path)
+        after_text = read_text_if_possible(after_path)
+        if before_text is None or after_text is None:
+            if before_path.read_bytes() != after_path.read_bytes():
+                print(f"would change binary file: {rel}")
+                diff_found = True
+            continue
+        if before_text == after_text:
+            continue
+
+        diff_found = True
+        print(f"would change: {rel}")
+        for line in difflib.unified_diff(
+            before_text.splitlines(keepends=True),
+            after_text.splitlines(keepends=True),
+            fromfile=f"a/{rel}",
+            tofile=f"b/{rel}",
+        ):
+            print(line, end="")
+
+    if not diff_found:
+        print("Dry run produced no file changes")
 
 
 def main() -> int:
@@ -140,13 +255,19 @@ def main() -> int:
     )
     parser.add_argument(
         "--fix-hashes-command",
-        default=DEFAULT_FIX_HASHES_COMMAND,
-        help=f"Command to run when the build fails (default: {DEFAULT_FIX_HASHES_COMMAND!r})",
+        default=default_fix_hashes_command(),
+        help=(
+            "Command to run when the build fails "
+            f"(default: {default_fix_hashes_command()!r})"
+        ),
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show the planned updates and commands without mutating anything",
+        help=(
+            "Run the refresh in a temporary working tree and print the resulting "
+            "diff without changing this checkout"
+        ),
     )
     parser.add_argument(
         "--list",
@@ -184,30 +305,26 @@ def main() -> int:
         print(f"- {name}")
 
     if args.dry_run:
-        for name in selected:
-            print(f"would run: nix flake update {name}")
-        print(f"would run: nix build --no-link --print-build-logs {args.build_target}")
-        print(f"would run on build failure: {args.fix_hashes_command}")
-        print(
-            f"would rerun: nix build --no-link --print-build-logs {args.build_target}"
-        )
+        dry_run_root = working_tree_copy()
+        print(f"Running dry run in {dry_run_root}")
+        try:
+            run_refresh(
+                cwd=dry_run_root,
+                selected=selected,
+                build_target=args.build_target,
+                fix_hashes_command=args.fix_hashes_command,
+            )
+            print_diff(REPO_ROOT, dry_run_root)
+        finally:
+            shutil.rmtree(dry_run_root.parent)
         return 0
 
-    ensure_hash_fixer(args.fix_hashes_command)
-
-    for name in selected:
-        run("nix", "flake", "update", name)
-
-    build_status = subprocess.run(
-        ["nix", "build", "--no-link", "--print-build-logs", args.build_target],
+    run_refresh(
         cwd=REPO_ROOT,
-        text=True,
-    ).returncode
-    if build_status == 0:
-        return 0
-
-    run(*hash_fix_command(args.fix_hashes_command))
-    run("nix", "build", "--no-link", "--print-build-logs", args.build_target)
+        selected=selected,
+        build_target=args.build_target,
+        fix_hashes_command=args.fix_hashes_command,
+    )
     return 0
 
 
