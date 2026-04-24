@@ -85,8 +85,7 @@ jobs:
         set -euo pipefail
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        mapfile -t changed_files < <(git diff --name-only)
-        git add -- "${changed_files[@]}"
+        git add -u
         git commit -m "Apply Renovate PR fixes
 
         Refresh flake artifacts when needed and apply pre-commit fixes."
