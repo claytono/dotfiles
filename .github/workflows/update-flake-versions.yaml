@@ -65,7 +65,12 @@ jobs:
         git push "https://x-access-token:${PAT}@github.com/${GITHUB_REPOSITORY}" "HEAD:${BRANCH_NAME}"
 
         if [ -s /tmp/comment.md ]; then
-          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
+          if gh pr view "$PR_NUMBER" --json comments | python3 -c 'import json, sys; from pathlib import Path; target = Path(sys.argv[1]).read_text().rstrip("\\r\\n"); comments = json.load(sys.stdin).get("comments", []); exists = any((comment.get("body") or "").rstrip("\\r\\n") == target for comment in comments); sys.exit(0 if exists else 1)' /tmp/comment.md
+          then
+            echo "Identical PR comment already exists"
+          else
+            gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
+          fi
         fi
       env:
         PAT: ${{ secrets.PAT }}
