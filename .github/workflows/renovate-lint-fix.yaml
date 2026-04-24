@@ -62,6 +62,8 @@ jobs:
       with:
         path: ~/.cache/pre-commit
         key: ${{ runner.os }}-precommit-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-precommit-
 
     - name: No relevant changes
       if: steps.changes.outputs.lintable != 'true'
