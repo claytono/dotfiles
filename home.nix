@@ -121,6 +121,7 @@ in {
 
   home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
   home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
+  home.file.".tmux.conf".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.tmux.conf";
   home.file."bin/ssh-known-hosts-update".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/ssh-known-hosts-update";
 
   home.packages = with pkgs; [
