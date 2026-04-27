@@ -57,9 +57,67 @@ jobs:
         == 'true'
       run: |
         set -o pipefail
-        nix build --no-link --print-build-logs --log-format raw --verbose \
-          --print-out-paths ${{ matrix.flake-output }} \
-          | tee /tmp/flake-output-paths
+
+        dump_build_state() {
+          echo "::group::Nix build state $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+          echo "Active build processes:"
+          pgrep -f '[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex' \
+            | while IFS= read -r pid; do
+              ps -p "$pid" -o pid= -o ppid= -o etime= -o pcpu= -o pmem= -o command=
+            done \
+            || true
+
+          echo "Active Nix build directories:"
+          find /private/tmp -maxdepth 1 -type d -name 'nix-build-*' -print 2>/dev/null \
+            | while IFS= read -r build_dir; do
+              du -sh "$build_dir" 2>/dev/null || true
+            done \
+            | tail -20 \
+            || true
+
+          echo "Recent Nix build logs:"
+          find /nix/var/log/nix/drvs -type f -name '*.bz2' -print 2>/dev/null \
+            | while IFS= read -r log_file; do
+              printf '%s %s\n' "$(stat -f '%m' "$log_file")" "$log_file"
+            done \
+            | sort -nr \
+            | head -5 \
+            | cut -d' ' -f2- \
+            | while IFS= read -r log_file; do
+              echo "--- ${log_file}"
+              bzip2 -dc "$log_file" 2>/dev/null | tail -40 || true
+            done \
+            || true
+
+          echo "::endgroup::"
+        }
+
+        (
+          nix build --no-link --print-build-logs --log-format raw --verbose \
+            --debug --show-trace \
+            --option keep-failed true \
+            --option log-lines 200 \
+            --print-out-paths ${{ matrix.flake-output }} \
+            | tee /tmp/flake-output-paths
+        ) &
+        build_pid=$!
+
+        while kill -0 "$build_pid" 2>/dev/null; do
+          sleep 60
+          dump_build_state
+        done &
+        watchdog_pid=$!
+
+        set +e
+        wait "$build_pid"
+        build_status=$?
+        set -e
+
+        kill "$watchdog_pid" 2>/dev/null || true
+        wait "$watchdog_pid" 2>/dev/null || true
+
+        exit "$build_status"
 
     - name: Push flake closure to Cachix
       if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
