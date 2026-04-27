@@ -163,6 +163,7 @@
           default = pkgs.mkShell {
             packages = [
               pkgs.pre-commit
+              pkgs.shellcheck
               (pkgs.python313.withPackages (ps: [ ps.pyyaml ]))
             ];
           };
