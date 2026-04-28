@@ -58,37 +58,92 @@ jobs:
       run: |
         set -o pipefail
 
+        print_matching_processes() {
+          ps -axo pid=,ppid=,etime=,pcpu=,pmem=,rss=,state=,command= \
+            | awk '/[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex|[l]d / { print }' \
+            || true
+        }
+
+        print_process_ancestry() {
+          pgrep -f '[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex' \
+            | head -20 \
+            | while IFS= read -r pid; do
+              echo "--- ancestry for PID ${pid}"
+              current_pid="$pid"
+              depth=0
+              while [ -n "$current_pid" ] && [ "$current_pid" != "0" ] && [ "$depth" -lt 12 ]; do
+                ps -p "$current_pid" \
+                  -o pid= -o ppid= -o etime= -o pcpu= -o pmem= -o rss= -o state= -o command= \
+                  || break
+                current_pid=$(ps -p "$current_pid" -o ppid= | tr -d ' ')
+                depth=$((depth + 1))
+              done
+            done \
+            || true
+        }
+
+        sample_rustc() {
+          rustc_pid=$(pgrep -f '[r]ustc.*--crate-name codex' | head -1 || true)
+          if [ -n "$rustc_pid" ] && command -v sample >/dev/null 2>&1; then
+            echo "Rustc sample for PID ${rustc_pid}:"
+            sample "$rustc_pid" 5 -mayDie 2>&1 | tail -200 || true
+          fi
+        }
+
         dump_build_state() {
           echo "::group::Nix build state $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-          echo "Active build processes:"
-          pgrep -f '[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex' \
-            | while IFS= read -r pid; do
-              ps -p "$pid" -o pid= -o ppid= -o etime= -o pcpu= -o pmem= -o command=
-            done \
+          echo "Runner:"
+          sw_vers 2>/dev/null || true
+          sysctl -n hw.ncpu hw.memsize machdep.cpu.brand_string 2>/dev/null || true
+
+          echo "Memory:"
+          vm_stat 2>/dev/null || true
+          memory_pressure 2>/dev/null || true
+
+          echo "Top processes:"
+          ps -axo pid=,ppid=,etime=,pcpu=,pmem=,rss=,state=,command= \
+            | sort -k4 -nr \
+            | head -30 \
             || true
 
+          echo "Active build processes:"
+          print_matching_processes
+
+          echo "Relevant process ancestry:"
+          print_process_ancestry
+
+          echo "Disk usage:"
+          df -h / /nix /private/tmp 2>/dev/null || true
+
           echo "Active Nix build directories:"
-          find /private/tmp -maxdepth 1 -type d -name 'nix-build-*' -print 2>/dev/null \
+          find /nix/var/nix/builds /private/tmp -maxdepth 1 -type d \
+            \( -name 'nix-*' -o -name 'nix-build-*' \) -print 2>/dev/null \
             | while IFS= read -r build_dir; do
-              du -sh "$build_dir" 2>/dev/null || true
+              stat -f '%m %z %N' "$build_dir" 2>/dev/null || true
             done \
             | tail -20 \
             || true
 
-          echo "Recent Nix build logs:"
+          echo "Recent Nix build log files:"
           find /nix/var/log/nix/drvs -type f -name '*.bz2' -print 2>/dev/null \
             | while IFS= read -r log_file; do
-              printf '%s %s\n' "$(stat -f '%m' "$log_file")" "$log_file"
+              stat -f '%m %z %N' "$log_file" 2>/dev/null || true
             done \
             | sort -nr \
-            | head -5 \
-            | cut -d' ' -f2- \
-            | while IFS= read -r log_file; do
-              echo "--- ${log_file}"
-              bzip2 -dc "$log_file" 2>/dev/null | tail -40 || true
-            done \
+            | head -10 \
             || true
+
+          echo "Codex target metadata:"
+          find /nix/var/nix/builds -path '*/codex-rs/target' -type d -print 2>/dev/null \
+            | while IFS= read -r target_dir; do
+              stat -f '%m %z %N' "$target_dir" 2>/dev/null || true
+              find "$target_dir" -maxdepth 3 -type f 2>/dev/null | wc -l || true
+            done \
+            | tail -20 \
+            || true
+
+          sample_rustc
 
           echo "::endgroup::"
         }
