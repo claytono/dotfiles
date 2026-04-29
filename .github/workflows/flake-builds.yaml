@@ -38,15 +38,13 @@ jobs:
             - '.github/workflows/flake-builds.yaml'
 
     - name: Install Nix
-      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
-        == 'true'
+      if: steps.changes.outputs.flake != 'false'
       uses: cachix/install-nix-action@616559265b40713947b9c190a8ff4b507b5df49b  # v31
       with:
         github_access_token: ${{ github.token }}
 
     - name: Setup Cachix
-      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
-        == 'true'
+      if: steps.changes.outputs.flake != 'false'
       uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c  # v17
       with:
         name: claytono
@@ -55,8 +53,7 @@ jobs:
     - name: Start Tailscale SSH
       # Temporary diagnostics for PR 39. Remove after the long-running Codex
       # build is understood.
-      if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request'
-        && steps.changes.outputs.flake == 'true')
+      if: steps.changes.outputs.flake != 'false'
       uses: claytono/github-actions/tailscale-ssh@ef5adfc30461da4e7f1aad700b1ddfd39b2dbd61
       with:
         oauth-client-id: ${{ secrets.TAILSCALE_SSH_OAUTH_CLIENT_ID }}
@@ -65,137 +62,59 @@ jobs:
         mode: background
 
     - name: Build
-      if: github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
-        == 'true'
+      if: steps.changes.outputs.flake != 'false'
+      env:
+        CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
       run: |
         set -o pipefail
 
-        print_matching_processes() {
-          ps -axo pid=,ppid=,etime=,pcpu=,pmem=,rss=,state=,command= \
-            | awk '/[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex|[l]d / { print }' \
-            || true
-        }
+        flake_output='${{ matrix.flake-output }}'
+        build_command=(
+          nix build
+          --no-link
+          --keep-going
+          --print-out-paths
+          "$flake_output"
+        )
 
-        print_process_ancestry() {
-          pgrep -f '[n]ix|[c]argo|[r]ustc|[c]lang|[c]odex' \
-            | head -20 \
-            | while IFS= read -r pid; do
-              echo "--- ancestry for PID ${pid}"
-              current_pid="$pid"
-              depth=0
-              while [ -n "$current_pid" ] && [ "$current_pid" != "0" ] && [ "$depth" -lt 12 ]; do
-                ps -p "$current_pid" \
-                  -o pid= -o ppid= -o etime= -o pcpu= -o pmem= -o rss= -o state= -o command= \
-                  || break
-                current_pid=$(ps -p "$current_pid" -o ppid= | tr -d ' ')
-                depth=$((depth + 1))
-              done
-            done \
-            || true
-        }
+        build_output=/tmp/flake-build-output
+        output_paths=/tmp/flake-output-paths
+        rm -f "$build_output" "$output_paths"
 
-        sample_rustc() {
-          rustc_pid=$(pgrep -f '[r]ustc.*--crate-name codex' | head -1 || true)
-          if [ -n "$rustc_pid" ] && command -v sample >/dev/null 2>&1; then
-            echo "Rustc sample for PID ${rustc_pid}:"
-            sample "$rustc_pid" 5 -mayDie 2>&1 | tail -200 || true
-          fi
-        }
+        if [ -z "${CACHIX_AUTH_TOKEN:-}" ]; then
+          echo "CACHIX_AUTH_TOKEN is not configured for claytono/dotfiles" >&2
+          exit 1
+        fi
 
-        dump_build_state() {
-          echo "::group::Nix build state $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-
-          echo "Runner:"
-          sw_vers 2>/dev/null || true
-          sysctl -n hw.ncpu hw.memsize machdep.cpu.brand_string 2>/dev/null || true
-
-          echo "Memory:"
-          vm_stat 2>/dev/null || true
-          memory_pressure 2>/dev/null || true
-
-          echo "Top processes:"
-          ps -axo pid=,ppid=,etime=,pcpu=,pmem=,rss=,state=,command= \
-            | sort -k4 -nr \
-            | head -30 \
-            || true
-
-          echo "Active build processes:"
-          print_matching_processes
-
-          echo "Relevant process ancestry:"
-          print_process_ancestry
-
-          echo "Disk usage:"
-          df -h / /nix /private/tmp 2>/dev/null || true
-
-          echo "Active Nix build directories:"
-          find /nix/var/nix/builds /private/tmp -maxdepth 1 -type d \
-            \( -name 'nix-*' -o -name 'nix-build-*' \) -print 2>/dev/null \
-            | while IFS= read -r build_dir; do
-              stat -f '%m %z %N' "$build_dir" 2>/dev/null || true
-            done \
-            | tail -20 \
-            || true
-
-          echo "Recent Nix build log files:"
-          find /nix/var/log/nix/drvs -type f -name '*.bz2' -print 2>/dev/null \
-            | while IFS= read -r log_file; do
-              stat -f '%m %z %N' "$log_file" 2>/dev/null || true
-            done \
-            | sort -nr \
-            | head -10 \
-            || true
-
-          echo "Codex target metadata:"
-          find /nix/var/nix/builds -path '*/codex-rs/target' -type d -print 2>/dev/null \
-            | while IFS= read -r target_dir; do
-              stat -f '%m %z %N' "$target_dir" 2>/dev/null || true
-              find "$target_dir" -maxdepth 3 -type f 2>/dev/null | wc -l || true
-            done \
-            | tail -20 \
-            || true
-
-          sample_rustc
-
-          echo "::endgroup::"
-        }
-
-        (
-          nix build --no-link --print-build-logs --log-format raw --verbose \
-            --debug --show-trace \
-            --option keep-failed true \
-            --option log-lines 200 \
-            --print-out-paths ${{ matrix.flake-output }} \
-            | tee /tmp/flake-output-paths
-        ) &
-        build_pid=$!
-
-        while kill -0 "$build_pid" 2>/dev/null; do
-          sleep 60
-          dump_build_state
-        done &
-        watchdog_pid=$!
+        run_command=(
+          cachix watch-exec
+          --watch-mode post-build-hook
+          claytono
+          --
+          "${build_command[@]}"
+        )
 
         set +e
-        wait "$build_pid"
+        "${run_command[@]}" | tee "$build_output"
         build_status=$?
         set -e
 
-        kill "$watchdog_pid" 2>/dev/null || true
-        wait "$watchdog_pid" 2>/dev/null || true
-
+        awk '/^\/nix\/store\// { print }' "$build_output" > "$output_paths"
         exit "$build_status"
 
     - name: Push flake closure to Cachix
-      if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        && (github.event_name == 'workflow_dispatch' || steps.changes.outputs.flake
-        == 'true')
+      if: steps.changes.outputs.flake != 'false'
       env:
         CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
       run: |-
         if [ -z "$CACHIX_AUTH_TOKEN" ]; then
           echo "CACHIX_AUTH_TOKEN is not configured for claytono/dotfiles" >&2
           exit 1
+        fi
+
+        if [ ! -s /tmp/flake-output-paths ]; then
+          echo "No final flake output paths were produced; live cache upload handled completed paths." >&2
+          exit 0
         fi
 
         # Push the activation package closure explicitly so substituted paths
