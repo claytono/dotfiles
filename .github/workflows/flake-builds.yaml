@@ -13,11 +13,27 @@ jobs:
     name: Build flake outputs (${{ matrix.label }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
+      fail-fast: false
       matrix:
         include:
         - label: home-manager (macos arm64)
           runs-on: macos-26
-          flake-output: .#homeConfigurations.coneill.activationPackage
+          flake-output: .#homeConfigurations.coneill-aarch64-darwin.activationPackage
+          codex-output: .#packages.aarch64-darwin.codex
+          nix-cores: ''
+          extra-swap-size-gb: ''
+        - label: home-manager (linux arm64)
+          runs-on: ubuntu-24.04-arm
+          flake-output: .#homeConfigurations.coneill-aarch64-linux.activationPackage
+          codex-output: .#packages.aarch64-linux.codex
+          nix-cores: '1'
+          extra-swap-size-gb: '8'
+        - label: home-manager (linux amd64)
+          runs-on: ubuntu-24.04
+          flake-output: .#homeConfigurations.coneill-x86_64-linux.activationPackage
+          codex-output: .#packages.x86_64-linux.codex
+          nix-cores: ''
+          extra-swap-size-gb: ''
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -61,6 +77,20 @@ jobs:
         hostname: dotfiles-flake-${{ github.run_id }}-${{ github.run_attempt }}
         mode: background
 
+    - name: Add extra swap
+      if: steps.changes.outputs.flake != 'false' && matrix.extra-swap-size-gb != ''
+      run: |
+        set -euo pipefail
+
+        swap_size_gb='${{ matrix.extra-swap-size-gb }}'
+        swapfile=/mnt/github-actions-extra.swap
+
+        sudo fallocate -l "${swap_size_gb}G" "$swapfile"
+        sudo chmod 600 "$swapfile"
+        sudo mkswap "$swapfile"
+        sudo swapon "$swapfile"
+        swapon --show
+
     - name: Build
       if: steps.changes.outputs.flake != 'false'
       env:
@@ -69,13 +99,19 @@ jobs:
         set -o pipefail
 
         flake_output='${{ matrix.flake-output }}'
+        codex_output='${{ matrix.codex-output }}'
+        nix_cores='${{ matrix.nix-cores }}'
         build_command=(
           nix build
           --no-link
           --keep-going
           --print-out-paths
-          "$flake_output"
+          --max-jobs 1
         )
+        if [ -n "$nix_cores" ]; then
+          build_command+=(--cores "$nix_cores")
+        fi
+        build_command+=("$flake_output" "$codex_output")
 
         build_output=/tmp/flake-build-output
         output_paths=/tmp/flake-output-paths
@@ -117,6 +153,6 @@ jobs:
           exit 0
         fi
 
-        # Push the activation package closure explicitly so substituted paths
-        # like Codex still get uploaded to Cachix on main pushes.
+        # Push final flake output closures explicitly so substituted paths
+        # still get uploaded to Cachix on main pushes.
         cachix push claytono < /tmp/flake-output-paths
