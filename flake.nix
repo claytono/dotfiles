@@ -23,9 +23,7 @@
 
   outputs = { self, nixpkgs, codex, home-manager, nix-search-cli, strace-macos }:
     let
-      supportedSystems = [ "aarch64-darwin" "x86_64-linux" ];
-      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-      darwinPkgs = nixpkgs.legacyPackages.aarch64-darwin;
+      pkgsFor = system: nixpkgs.legacyPackages.${system};
       codexSource = codex.outPath;
       codexVersion =
         (builtins.fromTOML (builtins.readFile (codexSource + "/codex-rs/Cargo.toml")))
@@ -38,10 +36,31 @@
           (throw "Unable to find v8 crate in Codex Cargo.lock")
           codexCargoLock.package
         ).version;
-      librustyV8 = darwinPkgs.fetchurl {
-        url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_aarch64-apple-darwin.a.gz";
-        hash = "sha256-v+LJvjKlbChUbw+WWCXuaPv2BkBfMQzE4XtEilaM+Yo=";
+      rustyV8Archives = {
+        aarch64-darwin = {
+          platform = "aarch64-apple-darwin";
+          hash = "sha256-v+LJvjKlbChUbw+WWCXuaPv2BkBfMQzE4XtEilaM+Yo=";
+        };
+        aarch64-linux = {
+          platform = "aarch64-unknown-linux-gnu";
+          hash = "sha256-2/FlsHyBvbBUvARrQ9I+afz3vMGkwbW0d2mDpxBi7Ng=";
+        };
+        x86_64-linux = {
+          platform = "x86_64-unknown-linux-gnu";
+          hash = "sha256-5ktNmeSuKTouhGJEqJuAF4uhA4LBP7WRwfppaPUpEVM=";
+        };
       };
+      supportedSystems = builtins.attrNames rustyV8Archives;
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      librustyV8For = system:
+        let
+          pkgs = pkgsFor system;
+          archive = rustyV8Archives.${system};
+        in
+          pkgs.fetchurl {
+            url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_${archive.platform}.a.gz";
+            hash = archive.hash;
+          };
       codexPackage = {
         lib,
         rustPlatform,
@@ -59,6 +78,7 @@
         openssl,
         ripgrep,
         versionCheckHook,
+        librustyV8,
         installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
         ...
       }:
@@ -147,18 +167,39 @@
             platforms = lib.platforms.unix;
           };
         });
-      codexPkg = darwinPkgs.callPackage codexPackage { };
-    in {
-      homeConfigurations."coneill" = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages.aarch64-darwin;
-        modules = [ ./home.nix ];
-        extraSpecialArgs = {
-          inherit nix-search-cli strace-macos codexPkg;
+      codexPkgFor = system: (pkgsFor system).callPackage codexPackage {
+        librustyV8 = librustyV8For system;
+      };
+      homeConfigurationFor = system:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = pkgsFor system;
+          modules = [ ./home.nix ];
+          extraSpecialArgs = {
+            inherit nix-search-cli strace-macos;
+            codexPkg = codexPkgFor system;
+          };
         };
+      systemHomeConfigurations =
+        builtins.listToAttrs (map (system: {
+          name = "coneill-${system}";
+          value = homeConfigurationFor system;
+        }) supportedSystems);
+    in {
+      lib = {
+        inherit codexV8Version rustyV8Archives supportedSystems;
+      };
+
+      packages = forAllSystems (system: {
+        codex = codexPkgFor system;
+        default = codexPkgFor system;
+      });
+
+      homeConfigurations = systemHomeConfigurations // {
+        coneill = systemHomeConfigurations.coneill-aarch64-darwin;
       };
 
       devShells = forAllSystems (system:
-        let pkgs = nixpkgs.legacyPackages.${system};
+        let pkgs = pkgsFor system;
         in {
           default = pkgs.mkShell {
             packages = [
@@ -167,6 +208,7 @@
               (pkgs.python313.withPackages (ps: [ ps.pyyaml ]))
             ];
           };
-        });
+        }
+      );
     };
 }

@@ -1,6 +1,9 @@
 { config, pkgs, lib, codexPkg, ... }:
 
 let
+  username = "coneill";
+  homeDirectory = if pkgs.stdenv.isDarwin then "/Users/${username}" else "/home/${username}";
+
   # Custom package to include only the watch binary from procps on macOS
   watch-only = pkgs.stdenv.mkDerivation {
     name = "watch-only";
@@ -47,29 +50,30 @@ let
     };
   };
 
-  dagu = pkgs.stdenv.mkDerivation rec {
-    pname = "dagu";
-    version = "2.3.8";
-    src = pkgs.fetchurl {
-      url = "https://github.com/dagu-org/dagu/releases/download/v${version}/dagu_${version}_darwin_arm64.tar.gz";
-      sha256 = "1cz16fdsg1jypa5vlrnxwsz4nq6sr5l2k1x2282mi1fhdwgpi9hl";
+  dagu =
+    pkgs.stdenv.mkDerivation rec {
+      pname = "dagu";
+      version = "2.3.8";
+      src = pkgs.fetchurl {
+        url = "https://github.com/dagu-org/dagu/releases/download/v${version}/dagu_${version}_darwin_arm64.tar.gz";
+        hash = "sha256-FKZ4H2/QhVgFEqKHKWjJ2mBLvubdZrqLul6Gp5sz4bM=";
+      };
+      sourceRoot = ".";
+      installPhase = ''
+        mkdir -p $out/bin
+        cp dagu $out/bin/
+        chmod +x $out/bin/dagu
+      '';
+      meta = with pkgs.lib; {
+        description = "A powerful, lightweight workflow engine for scheduling and running complex pipelines";
+        homepage = "https://github.com/dagu-org/dagu";
+        platforms = [ "aarch64-darwin" ];
+      };
     };
-    sourceRoot = ".";
-    installPhase = ''
-      mkdir -p $out/bin
-      cp dagu $out/bin/
-      chmod +x $out/bin/dagu
-    '';
-    meta = with pkgs.lib; {
-      description = "A powerful, lightweight workflow engine for scheduling and running complex pipelines";
-      homepage = "https://github.com/dagu-org/dagu";
-      platforms = [ "aarch64-darwin" ];
-    };
-  };
 
 in {
-  home.username = "coneill";
-  home.homeDirectory = "/Users/coneill";
+  home.username = username;
+  home.homeDirectory = homeDirectory;
   home.stateVersion = "24.05";
 
   programs.home-manager.enable = true;
@@ -184,7 +188,7 @@ in {
     dagu
   ];
 
-  launchd.agents.dagu = {
+  launchd.agents.dagu = lib.mkIf pkgs.stdenv.isDarwin {
     enable = true;
     config = {
       ProgramArguments = [
@@ -203,7 +207,7 @@ in {
     };
   };
 
-  home.activation.daguDataDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.daguDataDir = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/dagu"
-  '';
+  '');
 }
