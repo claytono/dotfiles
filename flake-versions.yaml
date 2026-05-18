@@ -26,7 +26,7 @@ htop: 3.5.1
 jq: 1.8.1
 k9s: 0.50.18
 kubecolor: 0.6.0
-kubectl: 1.36.0
+kubectl: 1.36.1
 kubectx: 0.11.0
 kubernetes-helm: 3.20.2
 lftp: 4.9.3
@@ -43,14 +43,14 @@ prettyping: 1.1.0
 pstree: '2.39'
 pv: 1.10.5
 python3: 3.13.12
-rclone: 1.74.0
+rclone: 1.74.1
 restic: 0.18.1
 ripgrep: 15.1.0
 socat: 1.8.1.1
 timer: 1.4.6
 tmux: 3.6a
 todoist: 0.24.0
-uv: 0.11.11
+uv: 0.11.14
 vim: 9.2.0340
 wget: 1.25.0
 xz: 5.8.3
