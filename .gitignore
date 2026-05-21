@@ -9,6 +9,6 @@ config/dagu/dags/memory/
 config/dagu/dags/skills/
 config/dagu/dags/souls/
 
-# Beads (JSONL committed only to beads-sync branch)
+# Beads local JSONL exports
 .beads/issues.jsonl
 .beads/interactions.jsonl
