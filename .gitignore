@@ -2,6 +2,9 @@
 .vscode
 .vagrant
 
+# Python
+__pycache__/
+
 # Dagu runtime files
 config/dagu/dags/.dag.index
 config/dagu/dags/docs/
