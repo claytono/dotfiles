@@ -4,6 +4,19 @@ let
   username = "coneill";
   homeDirectory = if pkgs.stdenv.isDarwin then "/Users/${username}" else "/home/${username}";
 
+  launchdPath = packages:
+    lib.concatStringsSep ":" (
+      lib.optionals (packages != [ ]) [ (lib.makeBinPath packages) ]
+      ++ [ "/usr/bin" "/bin" "/usr/sbin" "/sbin" ]
+    );
+
+  launchdEnvironment = { packages ? [ ], extra ? { } }:
+    {
+      HOME = homeDirectory;
+      SHELL = "${pkgs.bash}/bin/bash";
+      PATH = launchdPath packages;
+    } // extra;
+
   # Custom package to include only the watch binary from procps on macOS
   watch-only = pkgs.stdenv.mkDerivation {
     name = "watch-only";
@@ -70,6 +83,22 @@ let
         platforms = [ "aarch64-darwin" ];
       };
     };
+
+  node-exporter-wrapper = pkgs.writeShellScript "node-exporter-wrapper" ''
+    set -u
+
+    while true; do
+      tailscale_ip=$(tailscale ip -4 2>/dev/null | sed -n '1p')
+      if [ -n "$tailscale_ip" ]; then
+        exec ${pkgs.prometheus-node-exporter}/bin/node_exporter \
+          --web.listen-address=127.0.0.1:9100 \
+          --web.listen-address="$tailscale_ip:9100"
+      fi
+
+      echo "node-exporter: waiting for Tailscale IPv4 address" >&2
+      sleep 10
+    done
+  '';
 
 in {
   home.username = username;
@@ -164,6 +193,7 @@ in {
     patchutils_0_4_2
     pre-commit
     prettyping
+    prometheus-node-exporter
     python3
     pstree
     pv
@@ -194,11 +224,14 @@ in {
       ProgramArguments = [
         "${config.home.homeDirectory}/src/dotfiles/config/dagu/dagu-wrapper.sh"
       ];
-      EnvironmentVariables = {
-        HOME = config.home.homeDirectory;
-        SHELL = "${pkgs.bash}/bin/bash";
-        PATH = "/usr/bin:/bin:/usr/sbin";
-        DAGU_AUTH_MODE = "none";
+      EnvironmentVariables = launchdEnvironment {
+        packages = [
+          dagu
+          pkgs.coreutils
+        ];
+        extra = {
+          DAGU_AUTH_MODE = "none";
+        };
       };
       KeepAlive = true;
       RunAtLoad = true;
@@ -207,7 +240,31 @@ in {
     };
   };
 
+  launchd.agents."node-exporter" = lib.mkIf pkgs.stdenv.isDarwin {
+    enable = true;
+    config = {
+      ProgramArguments = [
+        "${node-exporter-wrapper}"
+      ];
+      EnvironmentVariables = launchdEnvironment {
+        packages = [
+          pkgs.coreutils
+          pkgs.gnused
+          pkgs.tailscale
+        ];
+      };
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "${config.home.homeDirectory}/.local/share/prometheus-exporters/node-exporter.stdout.log";
+      StandardErrorPath = "${config.home.homeDirectory}/.local/share/prometheus-exporters/node-exporter.stderr.log";
+    };
+  };
+
   home.activation.daguDataDir = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/dagu"
+  '');
+
+  home.activation.prometheusExportersDataDir = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "${config.home.homeDirectory}/.local/share/prometheus-exporters"
   '');
 }
