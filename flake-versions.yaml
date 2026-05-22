@@ -35,6 +35,7 @@ man-db: 2.13.1
 mtr: '0.96'
 nix-search-cli: 0.3-unstable-2025-12-03
 nmap: '7.99'
+node_exporter: 1.11.1
 nodejs: 24.14.1
 p7zip: '17.06'
 patchutils: 0.4.2
