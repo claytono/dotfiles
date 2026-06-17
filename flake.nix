@@ -52,6 +52,15 @@
       };
       supportedSystems = builtins.attrNames rustyV8Archives;
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      refreshableFixedOutputs = map (system:
+        let archive = rustyV8Archives.${system};
+        in {
+          input = "codex";
+          file = "flake.nix";
+          attrPath = [ "rustyV8Archives" system "hash" ];
+          url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_${archive.platform}.a.gz";
+          hashType = "sha256";
+        }) supportedSystems;
       librustyV8For = system:
         let
           pkgs = pkgsFor system;
@@ -186,7 +195,7 @@
         }) supportedSystems);
     in {
       lib = {
-        inherit codexV8Version rustyV8Archives supportedSystems;
+        inherit codexV8Version refreshableFixedOutputs rustyV8Archives supportedSystems;
       };
 
       packages = forAllSystems (system: {

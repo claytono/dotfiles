@@ -1,6 +1,10 @@
+import contextlib
 import importlib.machinery
 import importlib.util
+import io
+import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -56,6 +60,8 @@ class RunRefreshTest(unittest.TestCase):
         def fake_run(*args, cwd, capture_output=False):
             if args == ("git", "diff", "--no-ext-diff", "--full-index"):
                 return subprocess.CompletedProcess(args, 0, stdout=diffs.pop(0))
+            if args == ("nix", "eval", "--json", ".#lib.refreshableFixedOutputs"):
+                return subprocess.CompletedProcess(args, 0, stdout="[]")
             updates.append((args, cwd, capture_output))
             return subprocess.CompletedProcess(args, 0)
 
@@ -70,7 +76,7 @@ class RunRefreshTest(unittest.TestCase):
             try:
                 module.run_refresh(
                     cwd=Path("/repo"),
-                    selected=["codex"],
+                    selected=["nixpkgs"],
                     build_target=".#homeConfigurations.coneill.activationPackage",
                     fix_hashes_command="determinate-nixd fix hashes --auto-apply",
                 )
@@ -82,7 +88,7 @@ class RunRefreshTest(unittest.TestCase):
         self.assertEqual(
             [
                 (
-                    ("nix", "flake", "update", "codex"),
+                    ("nix", "flake", "update", "nixpkgs"),
                     Path("/repo"),
                     False,
                 )
@@ -113,6 +119,8 @@ class RunRefreshTest(unittest.TestCase):
         def fake_run(*args, cwd, capture_output=False):
             if args == ("git", "diff", "--no-ext-diff", "--full-index"):
                 return subprocess.CompletedProcess(args, 0, stdout=diff)
+            if args == ("nix", "eval", "--json", ".#lib.refreshableFixedOutputs"):
+                return subprocess.CompletedProcess(args, 0, stdout="[]")
             return subprocess.CompletedProcess(args, 0)
 
         with (
@@ -126,12 +134,138 @@ class RunRefreshTest(unittest.TestCase):
             ):
                 module.run_refresh(
                     cwd=Path("/repo"),
-                    selected=["codex"],
+                    selected=["nixpkgs"],
                     build_target=".#homeConfigurations.coneill.activationPackage",
                     fix_hashes_command="determinate-nixd fix hashes --auto-apply",
                 )
 
         self.assertEqual(1, build_count)
+
+    def test_refreshes_declared_fixed_outputs_before_build(self):
+        module = load_script_module()
+        manifest = [
+            {
+                "input": "codex",
+                "file": "flake.nix",
+                "attrPath": ["rustyV8Archives", "aarch64-darwin", "hash"],
+                "url": "https://example.test/aarch64-darwin.tar.gz",
+                "hashType": "sha256",
+            },
+            {
+                "input": "codex",
+                "file": "flake.nix",
+                "attrPath": ["rustyV8Archives", "aarch64-linux", "hash"],
+                "url": "https://example.test/aarch64-linux.tar.gz",
+                "hashType": "sha256",
+            },
+            {
+                "input": "codex",
+                "file": "flake.nix",
+                "attrPath": ["rustyV8Archives", "x86_64-linux", "hash"],
+                "url": "https://example.test/x86_64-linux.tar.gz",
+                "hashType": "sha256",
+            },
+            {
+                "input": "nixpkgs",
+                "file": "flake.nix",
+                "attrPath": ["ignoredArchives", "x86_64-linux", "hash"],
+                "url": "https://example.test/ignored.tar.gz",
+                "hashType": "sha256",
+            },
+        ]
+        prefetch_hashes = {
+            "https://example.test/aarch64-darwin.tar.gz": "sha256-new-darwin",
+            "https://example.test/aarch64-linux.tar.gz": "sha256-new-arm",
+            "https://example.test/x86_64-linux.tar.gz": "sha256-new-x86",
+        }
+        flake_nix = """{
+  outputs = { self, nixpkgs }:
+    let
+      rustyV8Archives = {
+        aarch64-darwin = {
+          platform = "aarch64-apple-darwin";
+          hash = "sha256-old-darwin";
+        };
+        aarch64-linux = {
+          platform = "aarch64-unknown-linux-gnu";
+          hash = "sha256-old-arm";
+        };
+        x86_64-linux = {
+          platform = "x86_64-unknown-linux-gnu";
+          hash = "sha256-old-x86";
+        };
+      };
+      ignoredArchives = {
+        x86_64-linux = {
+          hash = "sha256-old-ignored";
+        };
+      };
+    in {};
+}
+"""
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            repo = Path(tempdir)
+            (repo / "flake.nix").write_text(flake_nix)
+            events = []
+
+            def fake_build(args, *, cwd, text):
+                events.append(("build", tuple(args)))
+                return subprocess.CompletedProcess(args, 0)
+
+            def fake_run(*args, cwd, capture_output=False):
+                events.append(("run", args))
+                if args == ("nix", "flake", "update", "codex"):
+                    return subprocess.CompletedProcess(args, 0)
+                if args == ("nix", "eval", "--json", ".#lib.refreshableFixedOutputs"):
+                    return subprocess.CompletedProcess(
+                        args,
+                        0,
+                        stdout=json.dumps(manifest),
+                    )
+                if args[:6] == (
+                    "nix",
+                    "store",
+                    "prefetch-file",
+                    "--json",
+                    "--hash-type",
+                    "sha256",
+                ):
+                    return subprocess.CompletedProcess(
+                        args,
+                        0,
+                        stdout=json.dumps({"hash": prefetch_hashes[args[6]]}),
+                    )
+                self.fail(f"unexpected command: {args}")
+
+            with (
+                patch.object(module.subprocess, "run", side_effect=fake_build),
+                patch.object(module, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                module.run_refresh(
+                    cwd=repo,
+                    selected=["codex"],
+                    build_target=".#homeConfigurations.coneill.activationPackage",
+                    fix_hashes_command="determinate-nixd fix hashes --auto-apply",
+                )
+
+            updated_flake = (repo / "flake.nix").read_text()
+            self.assertIn('hash = "sha256-new-darwin";', updated_flake)
+            self.assertIn('hash = "sha256-new-arm";', updated_flake)
+            self.assertIn('hash = "sha256-new-x86";', updated_flake)
+            self.assertIn('hash = "sha256-old-ignored";', updated_flake)
+            build_index = next(
+                index for index, event in enumerate(events) if event[0] == "build"
+            )
+            prefetch_indexes = [
+                index
+                for index, event in enumerate(events)
+                if event[0] == "run"
+                and event[1][:3] == ("nix", "store", "prefetch-file")
+            ]
+            self.assertTrue(prefetch_indexes)
+            self.assertLess(max(prefetch_indexes), build_index)
 
 
 if __name__ == "__main__":
