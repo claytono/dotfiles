@@ -5,6 +5,7 @@ import argparse
 import difflib
 import io
 import json
+import re
 import shlex
 import shutil
 import subprocess
@@ -18,6 +19,7 @@ DEFAULT_FIX_HASHES_COMMAND = "determinate-nixd fix hashes --auto-apply"
 FALLBACK_FIX_HASHES_COMMAND = (
     "nix run github:DeterminateSystems/determinate -- fix hashes --auto-apply"
 )
+REFRESHABLE_FIXED_OUTPUTS_ATTR = ".#lib.refreshableFixedOutputs"
 IGNORED_TREE_NAMES = frozenset({".git", ".beads", "__pycache__", "result"})
 COPY_IGNORE = shutil.ignore_patterns(*sorted(IGNORED_TREE_NAMES))
 
@@ -173,6 +175,175 @@ def working_tree_diff(*, cwd: Path) -> str:
     ).stdout
 
 
+def nix_eval_json(attr: str, *, cwd: Path) -> object:
+    result = run("nix", "eval", "--json", attr, cwd=cwd, capture_output=True)
+    return json.loads(result.stdout)
+
+
+def prefetch_file_hash(url: str, *, hash_type: str, cwd: Path) -> str:
+    result = run(
+        "nix",
+        "store",
+        "prefetch-file",
+        "--json",
+        "--hash-type",
+        hash_type,
+        url,
+        cwd=cwd,
+        capture_output=True,
+    )
+    return json.loads(result.stdout)["hash"]
+
+
+def nix_attr_name_pattern(attr_name: str) -> str:
+    escaped = re.escape(attr_name)
+    return rf'(?:{escaped}|"{escaped}")'
+
+
+def find_matching_brace(text: str, open_index: int) -> int:
+    depth = 0
+    in_string = False
+    escaped = False
+    in_line_comment = False
+
+    for index in range(open_index, len(text)):
+        char = text[index]
+
+        if in_line_comment:
+            if char == "\n":
+                in_line_comment = False
+            continue
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == "#":
+            in_line_comment = True
+            continue
+        if char == '"':
+            in_string = True
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+
+    raise SystemExit("Unable to find matching closing brace")
+
+
+def find_attrset_body(
+    text: str, *, attr_path: list[str], display_path: Path
+) -> tuple[int, int]:
+    start = 0
+    end = len(text)
+
+    for attr_name in attr_path:
+        attr_pattern = nix_attr_name_pattern(attr_name)
+        pattern = re.compile(
+            rf"^[ \t]*{attr_pattern}[ \t]*=[ \t]*\{{",
+            re.MULTILINE,
+        )
+        match = pattern.search(text, start, end)
+        if match is None:
+            raise SystemExit(
+                f"Unable to find attrset for {'.'.join(attr_path)} in {display_path}"
+            )
+        open_index = text.find("{", match.start(), match.end())
+        close_index = find_matching_brace(text, open_index)
+        start = open_index + 1
+        end = close_index
+
+    return start, end
+
+
+def update_string_attr(
+    *,
+    text: str,
+    attr_path: list[str],
+    new_value: str,
+    display_path: Path,
+) -> str:
+    if not attr_path:
+        raise SystemExit("Fixed-output record attrPath must not be empty")
+
+    parent_start, parent_end = find_attrset_body(
+        text,
+        attr_path=attr_path[:-1],
+        display_path=display_path,
+    )
+    final_attr = attr_path[-1]
+    final_pattern = nix_attr_name_pattern(final_attr)
+    pattern = re.compile(
+        rf'(?P<prefix>^[ \t]*{final_pattern}[ \t]*=[ \t]*")[^"]+'
+        rf'(?P<suffix>"[ \t]*;)',
+        re.MULTILINE,
+    )
+
+    matches = list(pattern.finditer(text, parent_start, parent_end))
+    if len(matches) != 1:
+        raise SystemExit(
+            f"Unable to update {'.'.join(attr_path)} in {display_path}; "
+            f"expected one string assignment, found {len(matches)}"
+        )
+
+    match = matches[0]
+    replacement = f"{match.group('prefix')}{new_value}{match.group('suffix')}"
+    return text[: match.start()] + replacement + text[match.end() :]
+
+
+def update_declared_fixed_output(record: dict, *, cwd: Path) -> None:
+    file_path = cwd / record["file"]
+    attr_path = record["attrPath"]
+    if not isinstance(attr_path, list) or not all(
+        isinstance(attr, str) for attr in attr_path
+    ):
+        raise SystemExit("Fixed-output record attrPath must be a list of strings")
+
+    new_hash = prefetch_file_hash(
+        record["url"],
+        hash_type=record.get("hashType", "sha256"),
+        cwd=cwd,
+    )
+    original = file_path.read_text()
+    updated = update_string_attr(
+        text=original,
+        attr_path=attr_path,
+        new_value=new_hash,
+        display_path=file_path.relative_to(cwd),
+    )
+    if updated != original:
+        file_path.write_text(updated)
+
+    print(f"- {record['file']}:{'.'.join(attr_path)} -> {new_hash}")
+
+
+def refresh_declared_fixed_outputs(*, cwd: Path, selected: list[str]) -> None:
+    records = nix_eval_json(REFRESHABLE_FIXED_OUTPUTS_ATTR, cwd=cwd)
+    if not isinstance(records, list):
+        raise SystemExit(f"{REFRESHABLE_FIXED_OUTPUTS_ATTR} must evaluate to a list")
+
+    selected_inputs = set(selected)
+    matching_records = [
+        record
+        for record in records
+        if isinstance(record, dict) and record.get("input") in selected_inputs
+    ]
+    if not matching_records:
+        return
+
+    print("Refreshing declared fixed-output hashes")
+    for record in matching_records:
+        update_declared_fixed_output(record, cwd=cwd)
+
+
 def run_refresh(
     *,
     cwd: Path,
@@ -182,6 +353,8 @@ def run_refresh(
 ) -> None:
     for name in selected:
         run("nix", "flake", "update", name, cwd=cwd)
+
+    refresh_declared_fixed_outputs(cwd=cwd, selected=selected)
 
     while True:
         if build_flake_target(build_target, cwd=cwd):
