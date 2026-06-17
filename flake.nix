@@ -39,15 +39,15 @@
       rustyV8Archives = {
         aarch64-darwin = {
           platform = "aarch64-apple-darwin";
-          hash = "sha256-v+LJvjKlbChUbw+WWCXuaPv2BkBfMQzE4XtEilaM+Yo=";
+          hash = "sha256-fnR0DD7woOj8DiaKJYYSPpg0D+lDVmjNwSiPrvtzYq4=";
         };
         aarch64-linux = {
           platform = "aarch64-unknown-linux-gnu";
-          hash = "sha256-2/FlsHyBvbBUvARrQ9I+afz3vMGkwbW0d2mDpxBi7Ng=";
+          hash = "sha256-lMPw/eAFFAT8obaR8opJbXjbgw58+0maBEyxpeOllFU=";
         };
         x86_64-linux = {
           platform = "x86_64-unknown-linux-gnu";
-          hash = "sha256-5ktNmeSuKTouhGJEqJuAF4uhA4LBP7WRwfppaPUpEVM=";
+          hash = "sha256-Cd3vbFEZKv/wVBExoO+cAPgxhdI5HaqxgDgqOr82rJU=";
         };
       };
       supportedSystems = builtins.attrNames rustyV8Archives;
