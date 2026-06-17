@@ -151,6 +151,28 @@ def run_hash_fixer(command: str, *, cwd: Path) -> None:
     run(*command_args, cwd=cwd)
 
 
+def build_flake_target(build_target: str, *, cwd: Path) -> bool:
+    return (
+        subprocess.run(
+            ["nix", "build", "--no-link", "--print-build-logs", build_target],
+            cwd=cwd,
+            text=True,
+        ).returncode
+        == 0
+    )
+
+
+def working_tree_diff(*, cwd: Path) -> str:
+    return run(
+        "git",
+        "diff",
+        "--no-ext-diff",
+        "--full-index",
+        cwd=cwd,
+        capture_output=True,
+    ).stdout
+
+
 def run_refresh(
     *,
     cwd: Path,
@@ -161,16 +183,13 @@ def run_refresh(
     for name in selected:
         run("nix", "flake", "update", name, cwd=cwd)
 
-    build_status = subprocess.run(
-        ["nix", "build", "--no-link", "--print-build-logs", build_target],
-        cwd=cwd,
-        text=True,
-    ).returncode
-    if build_status == 0:
-        return
-
-    run_hash_fixer(fix_hashes_command, cwd=cwd)
-    run("nix", "build", "--no-link", "--print-build-logs", build_target, cwd=cwd)
+    while True:
+        if build_flake_target(build_target, cwd=cwd):
+            return
+        before_fix = working_tree_diff(cwd=cwd)
+        run_hash_fixer(fix_hashes_command, cwd=cwd)
+        if working_tree_diff(cwd=cwd) == before_fix:
+            raise SystemExit("Build still fails and hash fixer made no changes")
 
 
 def relative_files(root: Path) -> dict[Path, Path]:
