@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    codex.url = "github:openai/codex?ref=rust-v0.133.0";
+    codex.url = "github:openai/codex?ref=rust-v0.136.0";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -39,19 +39,28 @@
       rustyV8Archives = {
         aarch64-darwin = {
           platform = "aarch64-apple-darwin";
-          hash = "sha256-v+LJvjKlbChUbw+WWCXuaPv2BkBfMQzE4XtEilaM+Yo=";
+          hash = "sha256-fnR0DD7woOj8DiaKJYYSPpg0D+lDVmjNwSiPrvtzYq4=";
         };
         aarch64-linux = {
           platform = "aarch64-unknown-linux-gnu";
-          hash = "sha256-2/FlsHyBvbBUvARrQ9I+afz3vMGkwbW0d2mDpxBi7Ng=";
+          hash = "sha256-lMPw/eAFFAT8obaR8opJbXjbgw58+0maBEyxpeOllFU=";
         };
         x86_64-linux = {
           platform = "x86_64-unknown-linux-gnu";
-          hash = "sha256-5ktNmeSuKTouhGJEqJuAF4uhA4LBP7WRwfppaPUpEVM=";
+          hash = "sha256-Cd3vbFEZKv/wVBExoO+cAPgxhdI5HaqxgDgqOr82rJU=";
         };
       };
       supportedSystems = builtins.attrNames rustyV8Archives;
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      refreshableFixedOutputs = map (system:
+        let archive = rustyV8Archives.${system};
+        in {
+          input = "codex";
+          file = "flake.nix";
+          attrPath = [ "rustyV8Archives" system "hash" ];
+          url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_${archive.platform}.a.gz";
+          hashType = "sha256";
+        }) supportedSystems;
       librustyV8For = system:
         let
           pkgs = pkgsFor system;
@@ -89,7 +98,7 @@
           src = codexSource;
           sourceRoot = "source/codex-rs";
 
-          cargoHash = "sha256-J4wvPn4lSTSsJrTG56vkhJe2F2b+fUvJLEd+qKQ9LUg=";
+          cargoHash = "sha256-zHNOUHUnyNxYSWn13H77ZdIuv09kHSlJfQBatTugLUA=";
 
           cargoBuildFlags = [
             "--package"
@@ -186,7 +195,7 @@
         }) supportedSystems);
     in {
       lib = {
-        inherit codexV8Version rustyV8Archives supportedSystems;
+        inherit codexV8Version refreshableFixedOutputs rustyV8Archives supportedSystems;
       };
 
       packages = forAllSystems (system: {
