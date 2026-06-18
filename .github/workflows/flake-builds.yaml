@@ -103,6 +103,7 @@ jobs:
         nix_cores='${{ matrix.nix-cores }}'
         build_command=(
           nix build
+          --option fallback true
           --no-link
           --keep-going
           --print-out-paths
