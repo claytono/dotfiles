@@ -55,9 +55,9 @@ fi
 
 # Check if bash completion is available before sourcing
 if command_exists brew; then
-  if [[ -f $(brew --prefix)/etc/bash_completion ]]; then
+  if [[ -f "$(brew --prefix)/etc/bash_completion" ]]; then
     if command_exists complete; then
-      source $(brew --prefix)/etc/bash_completion
+      source "$(brew --prefix)/etc/bash_completion"
     else
       echo "Warning: bash completion not available - 'complete' command not found" >&2
     fi
@@ -67,18 +67,19 @@ fi
 if command_exists lsd; then
     alias ls=lsd
 else
-  if [ $MACOS ]; then
+  if [ "$MACOS" ]; then
     export CLICOLOR=1
     export LSCOLORS=ExFxCxDxBxegedabagacad
     if command_exists gls; then
-      eval $(gdircolors)
-      alias ls="gls --color=aut"
+      eval "$(gdircolors)"
+      alias ls="gls --color=auto"
     fi
   fi
 fi
 
 if command_exists vim; then
-    export EDITOR=$(type -p vim)
+    EDITOR=$(type -p vim)
+    export EDITOR
     export GIT_EDITOR=$EDITOR
 fi
 
