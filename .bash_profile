@@ -95,13 +95,8 @@ if [ -d /nix/var/nix/profiles/default/bin ]; then
   move_to_front /nix/var/nix/profiles/default/bin
 fi
 
-# check if this is a login and/or interactive shell
-# Use shopt instead of $0 check - works with both -bash and bash -l
-shopt -q login_shell && export LOGIN_BASH="1"
-[[ "$-" == *i* ]] && export INTERACTIVE_BASH="1"
-
 # run bashrc if this is a login, interactive shell
-if [ -n "$LOGIN_BASH" ] && [ -n "$INTERACTIVE_BASH" ]; then
+if shopt -q login_shell && [[ "$-" == *i* ]]; then
   source ~/.bashrc
 fi
 

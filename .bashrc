@@ -1,11 +1,9 @@
 # shellcheck shell=bash
 
-# check if this is a login shell
-# Use shopt instead of $0 check - works with both -bash and bash -l
-shopt -q login_shell && export LOGIN_BASH="1"
-
 # run bash_profile if this is not a login shell
-[ -z "$LOGIN_BASH" ] && source ~/.bash_profile
+if ! shopt -q login_shell; then
+  source ~/.bash_profile
+fi
 
 if [ -n "${GHOSTTY_RESOURCES_DIR}" ] && [ -f "${GHOSTTY_RESOURCES_DIR}/shell-integration/bash/ghostty.bash" ]; then
   builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/bash/ghostty.bash"
