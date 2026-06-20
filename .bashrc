@@ -45,12 +45,15 @@ pc_lred="\[$(tput setaf 9)\]"
 pc_reset="\[$(tput sgr0)\]"
 
 # inline flake name
+# shellcheck disable=SC2016
 flake_segment='${FLAKE_NAME:+${FLAKE_NAME}❄️}'
 
 # inline conditional user (shown if not coneill, claytono, or codespace)
+# shellcheck disable=SC2016
 user_segment='$( [[ $USER != "coneill" && $USER != "claytono" && $USER != "codespace" ]] && echo "'$pc_lred'\u'$pc_reset'@" )'
 
 # inline git branch
+# shellcheck disable=SC2016
 git_branch_segment='$(b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); [[ -n "$b" ]] && echo "'$pc_lred' ($b)'$pc_reset'")'
 
 # final prompt string
@@ -65,7 +68,7 @@ if command_exists direnv; then
   # Claude Code runs each command in a new shell, so we need to explicitly
   # export direnv environment on shell startup (not just on prompt)
   if [ -n "$CLAUDECODE" ]; then
-    eval "$(DIRENV_LOG_FORMAT= direnv export bash)"
+    eval "$(DIRENV_LOG_FORMAT='' direnv export bash)"
   fi
 fi
 
