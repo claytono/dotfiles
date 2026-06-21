@@ -211,6 +211,7 @@ in {
     yadm
     yq-go
     yt-dlp
+    zellij
   ] ++ lib.optionals pkgs.stdenv.isDarwin [
     watch-only
     coreutils-partial
