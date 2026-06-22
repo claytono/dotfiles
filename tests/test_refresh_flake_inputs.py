@@ -268,5 +268,30 @@ class RunRefreshTest(unittest.TestCase):
             self.assertLess(max(prefetch_indexes), build_index)
 
 
+class FlakeCodexPackagingTest(unittest.TestCase):
+    def test_codex_refresh_manifest_tracks_release_packages(self):
+        result = subprocess.run(
+            ["nix", "eval", "--json", ".#lib.refreshableFixedOutputs"],
+            cwd=SCRIPT_PATH.parent.parent,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        records = json.loads(result.stdout)
+        codex_records = [record for record in records if record.get("input") == "codex"]
+
+        self.assertEqual(3, len(codex_records))
+        for record in codex_records:
+            self.assertEqual("flake.nix", record["file"])
+            self.assertEqual("sha256", record["hashType"])
+            self.assertEqual("codexReleasePackages", record["attrPath"][0])
+            self.assertEqual("hash", record["attrPath"][-1])
+            self.assertIn(
+                "/codex-package-",
+                record["url"],
+            )
+            self.assertTrue(record["url"].endswith(".tar.gz"))
+
+
 if __name__ == "__main__":
     unittest.main()
