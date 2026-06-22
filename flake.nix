@@ -28,140 +28,72 @@
       codexVersion =
         (builtins.fromTOML (builtins.readFile (codexSource + "/codex-rs/Cargo.toml")))
         .workspace.package.version;
-      codexCargoLock =
-        builtins.fromTOML (builtins.readFile (codexSource + "/codex-rs/Cargo.lock"));
-      codexV8Version =
-        (nixpkgs.lib.findFirst
-          (pkg: pkg.name == "v8")
-          (throw "Unable to find v8 crate in Codex Cargo.lock")
-          codexCargoLock.package
-        ).version;
-      rustyV8Archives = {
+      codexReleasePackages = {
         aarch64-darwin = {
-          platform = "aarch64-apple-darwin";
-          hash = "sha256-fnR0DD7woOj8DiaKJYYSPpg0D+lDVmjNwSiPrvtzYq4=";
+          target = "aarch64-apple-darwin";
+          hash = "sha256-tu6w6mEJumwxdY2Zn/oXzduCjSATTFqvT8MzBrTvb3w=";
         };
         aarch64-linux = {
-          platform = "aarch64-unknown-linux-gnu";
-          hash = "sha256-lMPw/eAFFAT8obaR8opJbXjbgw58+0maBEyxpeOllFU=";
+          target = "aarch64-unknown-linux-musl";
+          hash = "sha256-h1bICtBYGZZ20Fi72RmBJGbXlohudXSlfE4Af3ZucHw=";
         };
         x86_64-linux = {
-          platform = "x86_64-unknown-linux-gnu";
-          hash = "sha256-Cd3vbFEZKv/wVBExoO+cAPgxhdI5HaqxgDgqOr82rJU=";
+          target = "x86_64-unknown-linux-musl";
+          hash = "sha256-s2RIgJfv0S2jtf+xsAmcq9izd7H5cEMVj393GxRWlT8=";
         };
       };
-      supportedSystems = builtins.attrNames rustyV8Archives;
+      supportedSystems = builtins.attrNames codexReleasePackages;
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       refreshableFixedOutputs = map (system:
-        let archive = rustyV8Archives.${system};
+        let release = codexReleasePackages.${system};
         in {
           input = "codex";
           file = "flake.nix";
-          attrPath = [ "rustyV8Archives" system "hash" ];
-          url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_${archive.platform}.a.gz";
+          attrPath = [ "codexReleasePackages" system "hash" ];
+          url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-${release.target}.tar.gz";
           hashType = "sha256";
         }) supportedSystems;
-      librustyV8For = system:
-        let
-          pkgs = pkgsFor system;
-          archive = rustyV8Archives.${system};
-        in
-          pkgs.fetchurl {
-            url = "https://github.com/denoland/rusty_v8/releases/download/v${codexV8Version}/librusty_v8_release_${archive.platform}.a.gz";
-            hash = archive.hash;
-          };
       codexPackage = {
+        fetchurl,
         lib,
-        rustPlatform,
-        stdenv,
         installShellFiles,
-        bubblewrap,
-        clang,
-        cmake,
-        gitMinimal,
-        libcap,
-        libclang,
-        livekit-libwebrtc,
-        makeBinaryWrapper,
-        pkg-config,
-        openssl,
-        ripgrep,
+        stdenvNoCC,
         versionCheckHook,
-        librustyV8,
-        installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
+        installShellCompletions ? stdenvNoCC.buildPlatform.canExecute stdenvNoCC.hostPlatform,
         ...
       }:
-        rustPlatform.buildRustPackage (finalAttrs: {
+        let release = codexReleasePackages.${stdenvNoCC.hostPlatform.system};
+        in stdenvNoCC.mkDerivation (finalAttrs: {
           pname = "codex";
           version = codexVersion;
 
-          src = codexSource;
-          sourceRoot = "source/codex-rs";
-
-          cargoHash = "sha256-SX5LMO+IWismbH61Jd0g1mgykfav8DrqG+wjyNCWyCo=";
-
-          cargoBuildFlags = [
-            "--package"
-            "codex-cli"
-          ];
-          cargoCheckFlags = [
-            "--package"
-            "codex-cli"
-          ];
-
-          postPatch = ''
-            substituteInPlace $cargoDepsCopy/*/webrtc-sys-*/build.rs \
-              --replace-fail "cargo:rustc-link-lib=static=webrtc" "cargo:rustc-link-lib=dylib=webrtc"
-
-            substituteInPlace Cargo.toml \
-              --replace-fail 'lto = "fat"' "" \
-              --replace-fail 'codegen-units = 1' ""
-          '';
+          src = fetchurl {
+            url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-package-${release.target}.tar.gz";
+            hash = release.hash;
+          };
+          sourceRoot = ".";
 
           nativeBuildInputs = [
-            clang
-            cmake
-            gitMinimal
             installShellFiles
-            makeBinaryWrapper
-            pkg-config
           ];
 
-          buildInputs = [
-            libclang
-            openssl
-          ]
-          ++ lib.optionals stdenv.hostPlatform.isLinux [
-            libcap
-          ];
+          dontConfigure = true;
+          dontBuild = true;
 
-          env = {
-            LIBCLANG_PATH = "${lib.getLib libclang}/lib";
-            LK_CUSTOM_WEBRTC = lib.getDev livekit-libwebrtc;
-            NIX_CFLAGS_COMPILE = toString (
-              lib.optionals stdenv.cc.isGNU [
-                "-Wno-error=stringop-overflow"
-              ]
-              ++ lib.optionals stdenv.cc.isClang [
-                "-Wno-error=character-conversion"
-              ]
-            );
-            RUSTY_V8_ARCHIVE = librustyV8;
-          };
+          installPhase = ''
+            runHook preInstall
 
-          doCheck = false;
+            mkdir -p $out
+            cp -R . $out/
+
+            runHook postInstall
+          '';
 
           postInstall = lib.optionalString installShellCompletions ''
             installShellCompletion --cmd codex \
               --bash <($out/bin/codex completion bash) \
               --fish <($out/bin/codex completion fish) \
               --zsh <($out/bin/codex completion zsh)
-          '';
-
-          postFixup = ''
-            wrapProgram $out/bin/codex --prefix PATH : ${
-              lib.makeBinPath ([ ripgrep ] ++ lib.optionals stdenv.hostPlatform.isLinux [ bubblewrap ])
-            }
           '';
 
           doInstallCheck = true;
@@ -177,7 +109,6 @@
           };
         });
       codexPkgFor = system: (pkgsFor system).callPackage codexPackage {
-        librustyV8 = librustyV8For system;
       };
       homeConfigurationFor = system:
         home-manager.lib.homeManagerConfiguration {
@@ -195,7 +126,7 @@
         }) supportedSystems);
     in {
       lib = {
-        inherit codexV8Version refreshableFixedOutputs rustyV8Archives supportedSystems;
+        inherit codexReleasePackages refreshableFixedOutputs supportedSystems;
       };
 
       packages = forAllSystems (system: {
