@@ -35,6 +35,25 @@
   "packageRules": [
     {
       "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDatasources": [
+        "github-tags"
+      ],
+      "matchDepNames": [
+        "openai/codex"
+      ],
+      "minimumReleaseAge": "2 days",
+      "automerge": true,
+      "automergeType": "pr",
+      "addLabels": [
+        "nix",
+        "automerge"
+      ],
+      "description": "Auto-merge Codex updates after a two-day release-age delay"
+    },
+    {
+      "matchManagers": [
         "pre-commit"
       ],
       "automerge": true,
