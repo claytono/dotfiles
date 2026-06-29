@@ -6,16 +6,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1781755168,
-        "narHash": "sha256-1ZOaZlwAkH6DJpxlInfbXpaqmsbOIOGrFoj2dYehBMA=",
+        "lastModified": 1782506804,
+        "narHash": "sha256-dxkyaWpgzqpAVFojDYQ6JpMPNBIX+d7xjIyLic4Cs8A=",
         "owner": "openai",
         "repo": "codex",
-        "rev": "3fb81667d30d9d24297216ea61fbfcc4351b2aa9",
+        "rev": "e2b60462a7321517895dd94920661599303a7539",
         "type": "github"
       },
       "original": {
         "owner": "openai",
-        "ref": "rust-v0.141.0",
+        "ref": "rust-v0.142.3",
         "repo": "codex",
         "type": "github"
       }

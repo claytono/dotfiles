@@ -31,15 +31,15 @@
       codexReleasePackages = {
         aarch64-darwin = {
           target = "aarch64-apple-darwin";
-          hash = "sha256-o38WiPabOLHO0FYIbSM+ZHhHQP4ZoqFeOtwcaCjhuTM=";
+          hash = "sha256-wTF3Ox6BIf0iLyVkGkxOsC1f+cADoh5YK8YlQK9wbhY=";
         };
         aarch64-linux = {
           target = "aarch64-unknown-linux-musl";
-          hash = "sha256-twAwM4WS3j42Hzzeg9Yk+IBh3zAKvjG2IHWlxaBYpvw=";
+          hash = "sha256-x0RDeofVdhC9mG29n9+/QfM5w4CzoLvlcyCA/7EN+gQ=";
         };
         x86_64-linux = {
           target = "x86_64-unknown-linux-musl";
-          hash = "sha256-CRyKLic3DEFAf6HLZH/pBb1P1w5GicE+/+4KLc4bKwc=";
+          hash = "sha256-bvoeu0Zxv827pRfVLSJ2hp1ATpDnfRAAVAeXtmYHhwU=";
         };
       };
       supportedSystems = builtins.attrNames codexReleasePackages;
