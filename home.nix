@@ -158,6 +158,22 @@ in {
   home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
   home.file.".tmux.conf".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.tmux.conf";
   home.file."bin/ssh-known-hosts-update".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/ssh-known-hosts-update";
+  home.file."bin/cco-claude" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    force = true;
+  };
+  home.file."bin/cco-codex" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    force = true;
+  };
+  home.file."bin/cco-opencode" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    force = true;
+  };
+  home.file."bin/cco-claude-safe" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude-safe";
+    force = true;
+  };
 
   home.packages = with pkgs; [
     argocd

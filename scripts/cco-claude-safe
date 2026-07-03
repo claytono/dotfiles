@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e
+
+cco_args=(
+  --command claude
+  --add-dir ~/.plannotator:rw
+  --add-dir ~/.cache/nix:rw
+  --add-dir ~/.cache/pre-commit:rw
+  --add-dir ~/.cache/uv:rw
+  --add-dir ~/.npm:rw
+  --add-dir ~/.gnupg:rw
+  --add-dir ~/.docker:rw
+  --add-dir ~/.ansible:rw
+)
+wrapped_args=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --add-dir=*)
+      cco_args+=("$1")
+      shift
+      ;;
+    --add-dir)
+      if [[ $# -lt 2 ]]; then
+        echo "--add-dir requires an argument" >&2
+        exit 1
+      fi
+      cco_args+=("$1" "$2")
+      shift 2
+      ;;
+    *)
+      wrapped_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+exec cco "${cco_args[@]}" "${wrapped_args[@]}"

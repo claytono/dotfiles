@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -e
+
+name=$(basename "$0")
+mode_args=()
+common_args=(
+  --allow-keychain
+  --add-dir ~/.plannotator:rw
+  --add-dir ~/.cache/nix:rw
+  --add-dir ~/.cache/pre-commit:rw
+  --add-dir ~/.cache/uv:rw
+  --add-dir ~/.npm:rw
+  --add-dir ~/.bun:rw
+  --add-dir ~/.gnupg:rw
+  --add-dir ~/.docker:rw
+  --add-dir ~/.ansible:rw
+  --add-dir ~/.config/superpowers:rw
+  --add-dir ~/.codex:rw
+  --add-dir ~/.local/share/uv:rw
+  --add-dir ~/.memex:rw
+)
+cco_args=("${common_args[@]}")
+wrapped_args=()
+
+case "$name" in
+  cco-claude)
+    mode_args=(--allow-dangerously-skip-permissions)
+    ;;
+  cco-opencode)
+    mode_args=(opencode)
+    export OPENCODE_ENABLE_EXA=1
+    ;;
+  cco-codex)
+    mode_args=(codex --dangerously-bypass-approvals-and-sandbox)
+    ;;
+  *)
+    echo "Unsupported wrapper name: $name" >&2
+    exit 1
+    ;;
+esac
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --add-dir=*)
+      cco_args+=("$1")
+      shift
+      ;;
+    --add-dir)
+      if [[ $# -lt 2 ]]; then
+        echo "--add-dir requires an argument" >&2
+        exit 1
+      fi
+      cco_args+=("$1" "$2")
+      shift 2
+      ;;
+    *)
+      wrapped_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+exec cco "${cco_args[@]}" "${mode_args[@]}" "${wrapped_args[@]}"
