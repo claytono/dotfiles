@@ -20,7 +20,7 @@ trap cleanup EXIT HUP INT TERM
 output="$(cd "$tmpdir" && "$1" "$2" --skip-git-repo-check -C "$tmpdir" "${@:3}" </dev/null 2>&1)"
 rc=$?
 cleanup
-if [ "$rc" -ne 0 ] && printf '%s\n' "$output" | grep -Eq "(You've hit your limit|Limit reached|hit your limit|rate_limit)"; then
+if [ "$rc" -ne 0 ] && printf '%s\n' "$output" | grep -Eq "(You've hit your (usage )?limit|Limit reached|hit your limit|rate_limit)"; then
   printf 'Usage limit detected: %s\n' "$output"
   exit 0
 fi
