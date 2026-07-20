@@ -2,7 +2,7 @@
 # Auto-generated from flake.lock — do not edit
 # Regenerate with: scripts/gen-flake-versions
 
-argocd: 3.4.4
+argocd: 3.4.5
 atool: 0.39.0
 atuin: 18.17.0
 bash-completion: 2.17.0
@@ -18,7 +18,7 @@ diskus: 0.9.0
 du-dust: 1.2.4
 fd: 10.4.2
 ffmpeg: 8.1.2
-fzf: 0.74.0
+fzf: 0.74.1
 gh: 2.96.0
 git: 2.54.0
 git-crypt: 0.8.0
@@ -35,7 +35,7 @@ man-db: 2.13.1
 mtr: '0.96'
 nix-search-cli: 0.3-unstable-2025-12-03
 nmap: '7.99'
-node_exporter: 1.11.1
+node_exporter: 1.12.0
 nodejs: 24.18.0
 p7zip: '17.06'
 patchutils: 0.4.2
@@ -46,13 +46,13 @@ pv: 1.11.0
 python3: 3.14.6
 rclone: 1.74.4
 restic: 0.19.1
-ripgrep: 15.1.0
+ripgrep: 15.2.0
 rtk: 0.43.0
 socat: 1.8.1.3
 timer: 1.4.6
 tmux: 3.7b
 todoist: 0.24.0
-uv: 0.11.26
+uv: 0.11.28
 vim: 9.2.0541
 wget: 1.25.0
 xz: 5.8.3
