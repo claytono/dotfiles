@@ -3,6 +3,9 @@ max_active_steps: 10
 catchup_window: 6h
 
 handler_on:
+  init:
+    id: wake_mac
+    command: $HOME/src/dotfiles/config/dagu/scripts/wake-for-dagu.sh
   exit:
     id: healthcheck_ping
     command: $HOME/src/dotfiles/config/dagu/scripts/healthcheck-ping.sh
