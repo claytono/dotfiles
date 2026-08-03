@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    codex.url = "github:openai/codex?ref=rust-v0.145.0";
+    codex.url = "github:openai/codex?ref=rust-v0.146.0";
 
     home-manager = {
       url = "github:nix-community/home-manager";
