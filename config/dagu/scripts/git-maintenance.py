@@ -92,6 +92,16 @@ def discover_repos() -> list[Path]:
     return repos
 
 
+def select_repos(repos: list[Path], repo_name: str | None) -> list[Path]:
+    """Restrict maintenance to one discovered repository when requested."""
+    if repo_name is None:
+        return repos
+    for repo in repos:
+        if repo.name == repo_name:
+            return [repo]
+    raise ValueError(f"repository {repo_name!r} not found directly under {SRC_DIR}")
+
+
 def is_due(
     repo_name: str,
     repo_state: dict,
@@ -127,12 +137,30 @@ def run_gc(repo: Path) -> tuple[bool, str]:
 
 
 def run_cleanup(repo: Path) -> tuple[bool, str] | None:
+    """Run a repository's cleanup script in its declared tool environment.
+
+    Repositories with a flake run cleanup through their default Nix dev shell.
+    A cleanup script that needs additional .envrc behavior must invoke direnv
+    itself; this generic runner intentionally does not load .envrc files.
+    """
     cleanup = repo / "scripts" / "cleanup"
     if not (cleanup.exists() and os.access(cleanup, os.X_OK)):
         return None
+
+    command = [str(cleanup)]
+    if (repo / "flake.nix").is_file():
+        command = [
+            "nix",
+            "develop",
+            "--no-update-lock-file",
+            str(repo),
+            "--command",
+            str(cleanup),
+        ]
+
     try:
         result = subprocess.run(
-            [str(cleanup)],
+            command,
             cwd=repo,
             capture_output=True,
             text=True,
@@ -210,10 +238,17 @@ def main() -> None:
     parser.add_argument(
         "--force", action="store_true", help="Process all repos regardless of schedule"
     )
+    parser.add_argument(
+        "--repo",
+        help="Only process the named direct repository under the source directory",
+    )
     args = parser.parse_args()
 
     state = load_state()
-    repos = discover_repos()
+    try:
+        repos = select_repos(discover_repos(), args.repo)
+    except ValueError as error:
+        parser.error(str(error))
     current_time = now_utc()
     today_weekday = current_time.weekday()
 
