@@ -1,8 +1,21 @@
 ---
 schedule: 0 7 * * *
 queue: cleanup
+params:
+- name: repo
+  type: string
+  default: ''
+  description: Optional repository to force for a targeted manual run
 env:
 - HEALTHCHECK_SKIP: '1'
+# Repository cleanup contract: when flake.nix exists, git-maintenance runs
+# scripts/cleanup through its default Nix dev shell. Cleanup scripts that need
+# additional .envrc behavior must invoke direnv themselves.
 steps:
 - id: git_maintenance
-  command: uv run $HOME/src/dotfiles/config/dagu/scripts/git-maintenance.py
+  command: |-
+    if [ -n "$repo" ]; then
+      uv run $HOME/src/dotfiles/config/dagu/scripts/git-maintenance.py --repo "$repo" --force
+    else
+      uv run $HOME/src/dotfiles/config/dagu/scripts/git-maintenance.py
+    fi
