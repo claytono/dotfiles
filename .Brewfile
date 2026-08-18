@@ -84,7 +84,7 @@ if macos?
   brew "awscli"
   brew "azure-cli"
   brew "bash"
-  brew "bash-completion"
+  brew "bash-completion@2"
   brew "codeowners"
   brew "coreutils"
   brew "curl"
