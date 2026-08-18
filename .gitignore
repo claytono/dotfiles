@@ -1,6 +1,7 @@
 *.swp
 .vscode
 .vagrant
+.tmp
 
 # Python
 __pycache__/

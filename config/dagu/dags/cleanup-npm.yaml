@@ -1,0 +1,9 @@
+---
+schedule: 0 8 * * 0
+queue: cleanup
+steps:
+- id: clean_package_cache
+  command: npm cache clean --force
+
+- id: clean_npx_cache
+  command: npm cache npx rm --force
