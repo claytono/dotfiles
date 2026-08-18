@@ -53,11 +53,11 @@ if [ -d "${HOME}/.krew/bin" ]; then
   pathmunge "${HOME}/.krew/bin" after
 fi
 
-# Check if bash completion is available before sourcing
-if command_exists brew; then
-  if [[ -f "$(brew --prefix)/etc/bash_completion" ]]; then
+# Only load bash completion in interactive shells
+if [[ $- == *i* ]] && command_exists brew; then
+  if [[ -f "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]]; then
     if command_exists complete; then
-      source "$(brew --prefix)/etc/bash_completion"
+      source "$(brew --prefix)/etc/profile.d/bash_completion.sh"
     else
       echo "Warning: bash completion not available - 'complete' command not found" >&2
     fi
