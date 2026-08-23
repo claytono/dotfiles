@@ -268,7 +268,7 @@ class RunRefreshTest(unittest.TestCase):
             self.assertLess(max(prefetch_indexes), build_index)
 
 
-class FlakeCodexPackagingTest(unittest.TestCase):
+class FlakeReleasePackagingTest(unittest.TestCase):
     def test_codex_refresh_manifest_tracks_release_packages(self):
         result = subprocess.run(
             ["nix", "eval", "--json", ".#lib.refreshableFixedOutputs"],
@@ -291,6 +291,37 @@ class FlakeCodexPackagingTest(unittest.TestCase):
                 record["url"],
             )
             self.assertTrue(record["url"].endswith(".tar.gz"))
+
+    def test_memex_refresh_manifest_tracks_release_packages(self):
+        result = subprocess.run(
+            ["nix", "eval", "--json", ".#lib.refreshableFixedOutputs"],
+            cwd=SCRIPT_PATH.parent.parent,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        records = json.loads(result.stdout)
+        memex_records = [record for record in records if record.get("input") == "memex"]
+
+        expected_assets = {
+            "aarch64-darwin": "macos-arm64",
+            "aarch64-linux": "linux-arm64",
+            "x86_64-linux": "linux-x86_64",
+        }
+        self.assertEqual(3, len(memex_records))
+        self.assertEqual(
+            set(expected_assets), {record["attrPath"][1] for record in memex_records}
+        )
+        for record in memex_records:
+            system = record["attrPath"][1]
+            self.assertEqual("flake.nix", record["file"])
+            self.assertEqual("sha256", record["hashType"])
+            self.assertEqual("memexReleasePackages", record["attrPath"][0])
+            self.assertEqual("hash", record["attrPath"][-1])
+            self.assertIn("/nicosuave/memex/releases/download/v", record["url"])
+            self.assertTrue(
+                record["url"].endswith(f"-{expected_assets[system]}.tar.gz")
+            )
 
 
 if __name__ == "__main__":

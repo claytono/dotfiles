@@ -30,6 +30,18 @@
       "depNameTemplate": "openai/codex",
       "datasourceTemplate": "github-tags",
       "versioningTemplate": "regex:^rust-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^flake\\.nix$/"
+      ],
+      "matchStrings": [
+        "memex\\s*=\\s*\\{\\s*url\\s*=\\s*\"github:nicosuave/memex\\?ref=(?<currentValue>v\\d+\\.\\d+\\.\\d+)\";"
+      ],
+      "depNameTemplate": "nicosuave/memex",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -51,6 +63,23 @@
         "automerge"
       ],
       "description": "Auto-merge Codex updates after a two-day release-age delay"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDatasources": [
+        "github-releases"
+      ],
+      "matchDepNames": [
+        "nicosuave/memex"
+      ],
+      "minimumReleaseAge": "14 days",
+      "automerge": false,
+      "addLabels": [
+        "nix"
+      ],
+      "description": "Require review of memex releases after a 14-day release-age delay"
     },
     {
       "matchManagers": [

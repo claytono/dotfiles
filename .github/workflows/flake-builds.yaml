@@ -20,18 +20,21 @@ jobs:
           runs-on: macos-26
           flake-output: .#homeConfigurations.coneill-aarch64-darwin.activationPackage
           codex-output: .#packages.aarch64-darwin.codex
+          memex-output: .#packages.aarch64-darwin.memex
           nix-cores: ''
           extra-swap-size-gb: ''
         - label: home-manager (linux arm64)
           runs-on: ubuntu-24.04-arm
           flake-output: .#homeConfigurations.coneill-aarch64-linux.activationPackage
           codex-output: .#packages.aarch64-linux.codex
+          memex-output: .#packages.aarch64-linux.memex
           nix-cores: '1'
           extra-swap-size-gb: '8'
         - label: home-manager (linux amd64)
           runs-on: ubuntu-24.04
           flake-output: .#homeConfigurations.coneill-x86_64-linux.activationPackage
           codex-output: .#packages.x86_64-linux.codex
+          memex-output: .#packages.x86_64-linux.memex
           nix-cores: ''
           extra-swap-size-gb: ''
 
@@ -100,6 +103,7 @@ jobs:
 
         flake_output='${{ matrix.flake-output }}'
         codex_output='${{ matrix.codex-output }}'
+        memex_output='${{ matrix.memex-output }}'
         nix_cores='${{ matrix.nix-cores }}'
         build_command=(
           nix build
@@ -112,7 +116,7 @@ jobs:
         if [ -n "$nix_cores" ]; then
           build_command+=(--cores "$nix_cores")
         fi
-        build_command+=("$flake_output" "$codex_output")
+        build_command+=("$flake_output" "$codex_output" "$memex_output")
 
         build_output=/tmp/flake-build-output
         output_paths=/tmp/flake-output-paths

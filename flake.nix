@@ -5,6 +5,11 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     codex.url = "github:openai/codex?ref=rust-v0.147.0";
 
+    memex = {
+      url = "github:nicosuave/memex?ref=v0.11.6";
+      flake = false;
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,7 +26,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, codex, home-manager, nix-search-cli, strace-macos }:
+  outputs = { self, nixpkgs, codex, memex, home-manager, nix-search-cli, strace-macos }:
     let
       pkgsFor = system: nixpkgs.legacyPackages.${system};
       codexSource = codex.outPath;
@@ -42,9 +47,27 @@
           hash = "sha256-vXWNU9VuQdxl4EX0WJ33mgOO0ZegEa3LUqJY5q1kz9o=";
         };
       };
+      memexSource = memex;
+      memexVersion =
+        (builtins.fromTOML (builtins.readFile (memexSource + "/Cargo.toml")))
+        .package.version;
+      memexReleasePackages = {
+        aarch64-darwin = {
+          asset = "macos-arm64";
+          hash = "sha256-II3dIHNjVlGvL+kAdAAC9628bS8IXlwMSV3/GeTIU5U=";
+        };
+        aarch64-linux = {
+          asset = "linux-arm64";
+          hash = "sha256-9kfv+rRLAIiIloqKvY6tAi8t//8AnNzbVhZtenzaVIc=";
+        };
+        x86_64-linux = {
+          asset = "linux-x86_64";
+          hash = "sha256-h9KTmigm5u5XP2sPoeQ9xzUQOjIHjzEpNZ8ZKVFjBzc=";
+        };
+      };
       supportedSystems = builtins.attrNames codexReleasePackages;
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-      refreshableFixedOutputs = map (system:
+      codexFixedOutputs = map (system:
         let release = codexReleasePackages.${system};
         in {
           input = "codex";
@@ -53,6 +76,16 @@
           url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-${release.target}.tar.gz";
           hashType = "sha256";
         }) supportedSystems;
+      memexFixedOutputs = map (system:
+        let release = memexReleasePackages.${system};
+        in {
+          input = "memex";
+          file = "flake.nix";
+          attrPath = [ "memexReleasePackages" system "hash" ];
+          url = "https://github.com/nicosuave/memex/releases/download/v${memexVersion}/memex-${memexVersion}-${release.asset}.tar.gz";
+          hashType = "sha256";
+        }) supportedSystems;
+      refreshableFixedOutputs = codexFixedOutputs ++ memexFixedOutputs;
       codexPackage = {
         fetchurl,
         lib,
@@ -110,13 +143,59 @@
         });
       codexPkgFor = system: (pkgsFor system).callPackage codexPackage {
       };
+      memexPackage = {
+        fetchurl,
+        lib,
+        stdenvNoCC,
+        versionCheckHook,
+        ...
+      }:
+        let release = memexReleasePackages.${stdenvNoCC.hostPlatform.system};
+        in stdenvNoCC.mkDerivation (finalAttrs: {
+          pname = "memex";
+          version = memexVersion;
+
+          src = fetchurl {
+            url = "https://github.com/nicosuave/memex/releases/download/v${finalAttrs.version}/memex-${finalAttrs.version}-${release.asset}.tar.gz";
+            hash = release.hash;
+          };
+          sourceRoot = ".";
+
+          dontConfigure = true;
+          dontBuild = true;
+
+          installPhase = ''
+            runHook preInstall
+
+            install -Dm755 memex $out/bin/memex
+
+            runHook postInstall
+          '';
+
+          doInstallCheck = true;
+          nativeInstallCheckInputs = [ versionCheckHook ];
+
+          meta = {
+            description = "Fast local history search for local agent logs";
+            homepage = "https://github.com/nicosuave/memex";
+            license = lib.licenses.mit;
+            mainProgram = "memex";
+            platforms = supportedSystems;
+          };
+        });
+      memexPkgFor = system: (pkgsFor system).callPackage memexPackage {
+      };
       homeConfigurationFor = system:
         home-manager.lib.homeManagerConfiguration {
           pkgs = pkgsFor system;
-          modules = [ ./home.nix ];
+          modules = [
+            (memexSource + "/nix/hm-module.nix")
+            ./home.nix
+          ];
           extraSpecialArgs = {
-            inherit nix-search-cli strace-macos;
+            inherit memexSource nix-search-cli strace-macos;
             codexPkg = codexPkgFor system;
+            memexPkg = memexPkgFor system;
           };
         };
       systemHomeConfigurations =
@@ -126,11 +205,12 @@
         }) supportedSystems);
     in {
       lib = {
-        inherit codexReleasePackages refreshableFixedOutputs supportedSystems;
+        inherit codexReleasePackages memexReleasePackages memexSource refreshableFixedOutputs supportedSystems;
       };
 
       packages = forAllSystems (system: {
         codex = codexPkgFor system;
+        memex = memexPkgFor system;
         default = codexPkgFor system;
       });
 
