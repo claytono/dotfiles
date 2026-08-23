@@ -1,4 +1,4 @@
-{ config, pkgs, lib, codexPkg, ... }:
+{ config, pkgs, lib, codexPkg, memexPkg, memexSource, ... }:
 
 let
   username = "coneill";
@@ -107,6 +107,22 @@ in {
 
   programs.home-manager.enable = true;
 
+  programs.memex = {
+    enable = true;
+    package = memexPkg;
+    settings = {
+      embeddings = true;
+      model = "gemma";
+      execution_provider = "cpu";
+      auto_index_on_search = false;
+      index_service_mode = "continuous";
+      index_service_poll_interval = 300;
+    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+      index_service_label = "com.memex.index";
+      index_service_plist = "${homeDirectory}/Library/LaunchAgents/com.memex.index.plist";
+    };
+  };
+
   programs.git = {
     enable = true;
 
@@ -156,6 +172,15 @@ in {
 
   home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
   home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
+  home.file.".agents/skills/memex-search" = {
+    source = memexSource + "/skills/memex-search";
+    force = true;
+  };
+  home.file.".claude/skills/memex-search" = {
+    source = memexSource + "/skills/memex-search";
+    force = true;
+  };
+  home.file.".memex/config.toml".force = true;
   home.file.".codex/skills/renovate-eval" = {
     source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/github-actions/renovate-eval";
   };
@@ -280,6 +305,25 @@ in {
       RunAtLoad = true;
       StandardOutPath = "${config.home.homeDirectory}/.local/share/prometheus-exporters/node-exporter.stdout.log";
       StandardErrorPath = "${config.home.homeDirectory}/.local/share/prometheus-exporters/node-exporter.stderr.log";
+    };
+  };
+
+  launchd.agents.memex = lib.mkIf pkgs.stdenv.isDarwin {
+    enable = true;
+    config = {
+      Label = "com.memex.index";
+      ProgramArguments = [
+        "${memexPkg}/bin/memex"
+        "index"
+        "--watch"
+        "--watch-interval"
+        "300"
+      ];
+      EnvironmentVariables = launchdEnvironment { };
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "${config.home.homeDirectory}/.memex/index-service.log";
+      StandardErrorPath = "${config.home.homeDirectory}/.memex/index-service.err.log";
     };
   };
 

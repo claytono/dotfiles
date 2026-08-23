@@ -89,6 +89,23 @@
         "type": "github"
       }
     },
+    "memex": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787287552,
+        "narHash": "sha256-sFefGAYzG86ZO9E/eQfgQ8PeMGt2jGVlIuYOjHYbMZ0=",
+        "owner": "nicosuave",
+        "repo": "memex",
+        "rev": "9176bb0e2c88e5013346526c0a9750d87ee7641c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicosuave",
+        "ref": "v0.11.6",
+        "repo": "memex",
+        "type": "github"
+      }
+    },
     "nix-filter": {
       "locked": {
         "lastModified": 1710156097,
@@ -207,6 +224,7 @@
       "inputs": {
         "codex": "codex",
         "home-manager": "home-manager",
+        "memex": "memex",
         "nix-search-cli": "nix-search-cli",
         "nixpkgs": "nixpkgs_3",
         "strace-macos": "strace-macos"
