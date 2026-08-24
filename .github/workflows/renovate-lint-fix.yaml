@@ -1,5 +1,5 @@
 ---
-name: Fix Linting Issues in Renovate PRs
+name: Reconcile PR Artifacts
 
 on:
   pull_request:
@@ -18,18 +18,18 @@ permissions:
 
 jobs:
   fix-linting:
-    name: Fix Linting Issues
+    name: Reconcile PR artifacts
     runs-on: macos-26
     if: github.event.pull_request.user.login == 'renovate[bot]'
 
     steps:
-    - name: Checkout repository
+    - name: Checkout PR revision
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       with:
         fetch-depth: 0
         token: ${{ secrets.PAT }}
         persist-credentials: false
-        ref: ${{ github.event.pull_request.head.ref }}
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Check for relevant changes
       uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4
@@ -67,7 +67,7 @@ jobs:
 
     - name: No relevant changes
       if: steps.changes.outputs.lintable != 'true'
-      run: echo "No lint-fixable changes in this PR"
+      run: echo "No artifacts to reconcile in this PR"
 
     - name: Refresh flake artifacts for changed inputs
       if: steps.changes.outputs.flake_input == 'true'
@@ -77,13 +77,27 @@ jobs:
         set -euo pipefail
 
         ./scripts/refresh-flake-inputs --base-ref "$BASE_SHA"
-        nix develop --command ./scripts/gen-flake-versions
 
     - name: Run pre-commit hooks on changed files
       if: steps.changes.outputs.lintable == 'true'
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        SKIP: terraform_validate,terraform_providers_lock
       run: |
-        # Run pre-commit hooks and capture the exit code
-        nix develop --command pre-commit run --all-files || true
+        set -euo pipefail
+
+        lint_changed_files() {
+          {
+            git diff --name-only --diff-filter=ACMR -z "$BASE_SHA...$HEAD_SHA"
+            git diff --name-only --diff-filter=ACMR -z
+          } | python3 -c 'import sys; paths = dict.fromkeys(path for path in sys.stdin.buffer.read().split(b"\0") if path); sys.stdout.buffer.write(b"\0".join(paths) + (b"\0" if paths else b""))' \
+            | xargs -0 nix develop --command ./scripts/lint --files
+        }
+
+        if ! lint_changed_files; then
+          lint_changed_files
+        fi
 
     - name: Check for changes
       if: steps.changes.outputs.lintable == 'true'
@@ -91,11 +105,11 @@ jobs:
       run: |
         if ! git diff --quiet; then
           echo "changes=true" >> "$GITHUB_OUTPUT"
-          echo "Linting fixes detected:"
+          echo "Artifact fixes detected:"
           git diff --stat
         else
           echo "changes=false" >> "$GITHUB_OUTPUT"
-          echo "No linting fixes needed"
+          echo "No artifact fixes needed"
         fi
 
     - name: Commit and push fixes
@@ -103,14 +117,24 @@ jobs:
         == 'true'
       env:
         BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        REPOSITORY: ${{ github.repository }}
+        START_SHA: ${{ github.event.pull_request.head.sha }}
+        PAT: ${{ secrets.PAT }}
       run: |-
         set -euo pipefail
+
+        remote_sha=$(git ls-remote "https://x-access-token:${PAT}@github.com/${REPOSITORY}" \
+          "refs/heads/${BRANCH_NAME}" | awk '{ print $1 }')
+        if [ "$remote_sha" != "$START_SHA" ]; then
+          echo "PR head advanced to $remote_sha; the newer workflow run will apply fixes"
+          exit 0
+        fi
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add -u
-        git commit -m "Apply Renovate PR fixes
+        git commit -m "Reconcile PR artifacts
 
-        Refresh flake artifacts when needed and apply pre-commit fixes."
-
-        echo "Pushing fixes to branch: $BRANCH_NAME"
-        git push "https://x-access-token:${{ secrets.PAT }}@github.com/${{ github.repository }}" "HEAD:$BRANCH_NAME"
+        Refresh changed flake inputs and apply formatting fixes."
+        git push --force-with-lease="refs/heads/${BRANCH_NAME}:${START_SHA}" \
+          "https://x-access-token:${PAT}@github.com/${REPOSITORY}" "HEAD:${BRANCH_NAME}"

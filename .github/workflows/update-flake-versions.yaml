@@ -7,22 +7,23 @@ on:
 
 concurrency:
   group: flake-versions-${{ github.head_ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   update-versions:
+    name: Update flake versions
     runs-on: macos-26
     permissions:
       contents: write
       pull-requests: write
 
     steps:
-    - name: Checkout PR branch
+    - name: Checkout PR revision
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
       with:
         persist-credentials: false
         fetch-depth: 0
-        ref: ${{ github.head_ref }}
+        ref: ${{ github.event.pull_request.head.sha }}
         token: ${{ secrets.PAT }}
 
     - name: Check for flake changes
@@ -51,6 +52,8 @@ jobs:
     - name: Update flake-versions.yaml
       if: steps.changes.outputs.flake == 'true'
       run: |
+        set -euo pipefail
+
         nix develop --command ./scripts/gen-flake-versions --comment-file /tmp/comment.md
 
         if git diff --quiet flake-versions.yaml; then
@@ -58,11 +61,19 @@ jobs:
           exit 0
         fi
 
+        remote_sha=$(git ls-remote "https://x-access-token:${PAT}@github.com/${GITHUB_REPOSITORY}" \
+          "refs/heads/${BRANCH_NAME}" | awk '{ print $1 }')
+        if [ "$remote_sha" != "$START_SHA" ]; then
+          echo "PR head advanced to $remote_sha; the newer workflow run will update versions"
+          exit 0
+        fi
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add flake-versions.yaml
         git commit -m "Update flake-versions.yaml"
-        git push "https://x-access-token:${PAT}@github.com/${GITHUB_REPOSITORY}" "HEAD:${BRANCH_NAME}"
+        git push --force-with-lease="refs/heads/${BRANCH_NAME}:${START_SHA}" \
+          "https://x-access-token:${PAT}@github.com/${GITHUB_REPOSITORY}" "HEAD:${BRANCH_NAME}"
 
         if [ -s /tmp/comment.md ]; then
           if gh pr view "$PR_NUMBER" --json comments | python3 -c 'import json, sys; from pathlib import Path; target = Path(sys.argv[1]).read_text().rstrip("\\r\\n"); comments = json.load(sys.stdin).get("comments", []); exists = any((comment.get("body") or "").rstrip("\\r\\n") == target for comment in comments); sys.exit(0 if exists else 1)' /tmp/comment.md
@@ -75,5 +86,6 @@ jobs:
       env:
         PAT: ${{ secrets.PAT }}
         BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+        START_SHA: ${{ github.event.pull_request.head.sha }}
         GH_TOKEN: ${{ secrets.PAT }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
