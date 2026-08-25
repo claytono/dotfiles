@@ -32,6 +32,7 @@ kubernetes-helm: 4.2.4
 lftp: 4.9.3
 lsd: 1.2.0
 man-db: 2.13.1
+memex: 0.11.6
 mtr: '0.96'
 nix-search-cli: 0.3-unstable-2025-12-03
 nmap: '7.991'

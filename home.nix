@@ -2,7 +2,8 @@
 
 let
   username = "coneill";
-  homeDirectory = if pkgs.stdenv.isDarwin then "/Users/${username}" else "/home/${username}";
+  homeDirectory = if pkgs.stdenv.hostPlatform.isDarwin then "/Users/${username}" else "/home/${username}";
+  memexPollInterval = 300;
 
   launchdPath = packages:
     lib.concatStringsSep ":" (
@@ -107,7 +108,7 @@ in {
 
   programs.home-manager.enable = true;
 
-  programs.memex = {
+  programs.memex = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     package = memexPkg;
     settings = {
@@ -116,10 +117,8 @@ in {
       execution_provider = "cpu";
       auto_index_on_search = false;
       index_service_mode = "continuous";
-      index_service_poll_interval = 300;
-    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
-      index_service_label = "com.memex.index";
-      index_service_plist = "${homeDirectory}/Library/LaunchAgents/com.memex.index.plist";
+      index_service_poll_interval = memexPollInterval;
+      index_service_plist = "${config.home.homeDirectory}/Library/LaunchAgents/com.memex.index.plist";
     };
   };
 
@@ -128,7 +127,7 @@ in {
 
     signing = {
       key = "clayton@oneill.net";
-      signByDefault = pkgs.stdenv.isDarwin;
+      signByDefault = pkgs.stdenv.hostPlatform.isDarwin;
       format = "openpgp";
     };
 
@@ -161,7 +160,7 @@ in {
       init.defaultBranch = "main";
       pull.rebase = true;
       "url \"git@github.com:\"".pushInsteadOf = "https://github.com/";
-    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
       credential.helper = "osxkeychain";
     };
   };
@@ -172,15 +171,17 @@ in {
 
   home.file.".bash_profile".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bash_profile";
   home.file.".bashrc".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.bashrc";
-  home.file.".agents/skills/memex-search" = {
+  home.file.".agents/skills/memex-search" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     source = memexSource + "/skills/memex-search";
     force = true;
   };
-  home.file.".claude/skills/memex-search" = {
+  home.file.".claude/skills/memex-search" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     source = memexSource + "/skills/memex-search";
     force = true;
   };
-  home.file.".memex/config.toml".force = true;
+  home.file.".memex/config.toml" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+    force = true;
+  };
   home.file.".codex/skills/renovate-eval" = {
     source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/github-actions/renovate-eval";
   };
@@ -259,14 +260,14 @@ in {
     yq-go
     yt-dlp
     zellij
-  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+  ] ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
     watch-only
     coreutils-partial
     ts-only
     dagu
   ];
 
-  launchd.agents.dagu = lib.mkIf pkgs.stdenv.isDarwin {
+  launchd.agents.dagu = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     config = {
       ProgramArguments = [
@@ -288,7 +289,7 @@ in {
     };
   };
 
-  launchd.agents."node-exporter" = lib.mkIf pkgs.stdenv.isDarwin {
+  launchd.agents."node-exporter" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     config = {
       ProgramArguments = [
@@ -308,7 +309,7 @@ in {
     };
   };
 
-  launchd.agents.memex = lib.mkIf pkgs.stdenv.isDarwin {
+  launchd.agents.memex = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     config = {
       Label = "com.memex.index";
@@ -317,21 +318,22 @@ in {
         "index"
         "--watch"
         "--watch-interval"
-        "300"
+        (toString memexPollInterval)
       ];
       EnvironmentVariables = launchdEnvironment { };
       KeepAlive = true;
       RunAtLoad = true;
+      WorkingDirectory = config.home.homeDirectory;
       StandardOutPath = "${config.home.homeDirectory}/.memex/index-service.log";
       StandardErrorPath = "${config.home.homeDirectory}/.memex/index-service.err.log";
     };
   };
 
-  home.activation.daguDataDir = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.daguDataDir = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/dagu"
   '');
 
-  home.activation.prometheusExportersDataDir = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.prometheusExportersDataDir = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/prometheus-exporters"
   '');
 }

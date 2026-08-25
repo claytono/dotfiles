@@ -56,16 +56,9 @@
           asset = "macos-arm64";
           hash = "sha256-II3dIHNjVlGvL+kAdAAC9628bS8IXlwMSV3/GeTIU5U=";
         };
-        aarch64-linux = {
-          asset = "linux-arm64";
-          hash = "sha256-9kfv+rRLAIiIloqKvY6tAi8t//8AnNzbVhZtenzaVIc=";
-        };
-        x86_64-linux = {
-          asset = "linux-x86_64";
-          hash = "sha256-h9KTmigm5u5XP2sPoeQ9xzUQOjIHjzEpNZ8ZKVFjBzc=";
-        };
       };
       supportedSystems = builtins.attrNames codexReleasePackages;
+      memexSystems = builtins.attrNames memexReleasePackages;
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       codexFixedOutputs = map (system:
         let release = codexReleasePackages.${system};
@@ -84,7 +77,7 @@
           attrPath = [ "memexReleasePackages" system "hash" ];
           url = "https://github.com/nicosuave/memex/releases/download/v${memexVersion}/memex-${memexVersion}-${release.asset}.tar.gz";
           hashType = "sha256";
-        }) supportedSystems;
+        }) memexSystems;
       refreshableFixedOutputs = codexFixedOutputs ++ memexFixedOutputs;
       codexPackage = {
         fetchurl,
@@ -180,7 +173,7 @@
             homepage = "https://github.com/nicosuave/memex";
             license = lib.licenses.mit;
             mainProgram = "memex";
-            platforms = supportedSystems;
+            platforms = memexSystems;
           };
         });
       memexPkgFor = system: (pkgsFor system).callPackage memexPackage {
@@ -195,7 +188,7 @@
           extraSpecialArgs = {
             inherit memexSource nix-search-cli strace-macos;
             codexPkg = codexPkgFor system;
-            memexPkg = memexPkgFor system;
+            memexPkg = if builtins.hasAttr system memexReleasePackages then memexPkgFor system else null;
           };
         };
       systemHomeConfigurations =
@@ -208,11 +201,14 @@
         inherit codexReleasePackages memexReleasePackages memexSource refreshableFixedOutputs supportedSystems;
       };
 
-      packages = forAllSystems (system: {
-        codex = codexPkgFor system;
-        memex = memexPkgFor system;
-        default = codexPkgFor system;
-      });
+      packages = forAllSystems (system:
+        {
+          codex = codexPkgFor system;
+          default = codexPkgFor system;
+        }
+        // nixpkgs.lib.optionalAttrs (builtins.hasAttr system memexReleasePackages) {
+          memex = memexPkgFor system;
+        });
 
       homeConfigurations = systemHomeConfigurations // {
         coneill = systemHomeConfigurations.coneill-aarch64-darwin;

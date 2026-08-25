@@ -27,14 +27,14 @@ jobs:
           runs-on: ubuntu-24.04-arm
           flake-output: .#homeConfigurations.coneill-aarch64-linux.activationPackage
           codex-output: .#packages.aarch64-linux.codex
-          memex-output: .#packages.aarch64-linux.memex
+          memex-output: ''
           nix-cores: '1'
           extra-swap-size-gb: '8'
         - label: home-manager (linux amd64)
           runs-on: ubuntu-24.04
           flake-output: .#homeConfigurations.coneill-x86_64-linux.activationPackage
           codex-output: .#packages.x86_64-linux.codex
-          memex-output: .#packages.x86_64-linux.memex
+          memex-output: ''
           nix-cores: ''
           extra-swap-size-gb: ''
 
@@ -116,7 +116,10 @@ jobs:
         if [ -n "$nix_cores" ]; then
           build_command+=(--cores "$nix_cores")
         fi
-        build_command+=("$flake_output" "$codex_output" "$memex_output")
+        build_command+=("$flake_output" "$codex_output")
+        if [ -n "$memex_output" ]; then
+          build_command+=("$memex_output")
+        fi
 
         build_output=/tmp/flake-build-output
         output_paths=/tmp/flake-output-paths
@@ -141,6 +144,12 @@ jobs:
         set -e
 
         awk '/^\/nix\/store\// { print }' "$build_output" > "$output_paths"
+
+        if [ "$build_status" -eq 0 ] && [ -n "$memex_output" ]; then
+          memex_path=$(nix path-info "$memex_output")
+          "$memex_path/bin/memex" --version
+        fi
+
         exit "$build_status"
 
     - name: Push flake closure to Cachix
