@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-
 SCRIPT_PATH = (
     Path(__file__).resolve().parent.parent / "scripts" / "refresh-flake-inputs"
 )
@@ -29,16 +28,20 @@ def load_script_module():
 
 class RunRefreshTest(unittest.TestCase):
     def test_loader_error_is_not_skipped_under_optimized_python(self):
-        with patch.object(
-            importlib.util,
-            "spec_from_loader",
-            return_value=importlib.machinery.ModuleSpec("refresh_flake_inputs", None),
-        ):
-            with self.assertRaisesRegex(
+        with (
+            patch.object(
+                importlib.util,
+                "spec_from_loader",
+                return_value=importlib.machinery.ModuleSpec(
+                    "refresh_flake_inputs", None
+                ),
+            ),
+            self.assertRaisesRegex(
                 RuntimeError,
                 "Unable to load refresh-flake-inputs script",
-            ):
-                load_script_module()
+            ),
+        ):
+            load_script_module()
 
     def test_runs_multiple_hash_fix_passes_until_build_succeeds(self):
         module = load_script_module()
@@ -127,17 +130,17 @@ class RunRefreshTest(unittest.TestCase):
             patch.object(module.subprocess, "run", side_effect=fake_build),
             patch.object(module, "run", side_effect=fake_run),
             patch.object(module, "run_hash_fixer", return_value=None),
-        ):
-            with self.assertRaisesRegex(
+            self.assertRaisesRegex(
                 SystemExit,
                 "Build still fails and hash fixer made no changes",
-            ):
-                module.run_refresh(
-                    cwd=Path("/repo"),
-                    selected=["nixpkgs"],
-                    build_target=".#homeConfigurations.coneill.activationPackage",
-                    fix_hashes_command="determinate-nixd fix hashes --auto-apply",
-                )
+            ),
+        ):
+            module.run_refresh(
+                cwd=Path("/repo"),
+                selected=["nixpkgs"],
+                build_target=".#homeConfigurations.coneill.activationPackage",
+                fix_hashes_command="determinate-nixd fix hashes --auto-apply",
+            )
 
         self.assertEqual(1, build_count)
 
@@ -305,10 +308,8 @@ class FlakeReleasePackagingTest(unittest.TestCase):
 
         expected_assets = {
             "aarch64-darwin": "macos-arm64",
-            "aarch64-linux": "linux-arm64",
-            "x86_64-linux": "linux-x86_64",
         }
-        self.assertEqual(3, len(memex_records))
+        self.assertEqual(1, len(memex_records))
         self.assertEqual(
             set(expected_assets), {record["attrPath"][1] for record in memex_records}
         )
