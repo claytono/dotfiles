@@ -47,7 +47,7 @@ jobs:
 
     - name: Install Nix
       if: steps.changes.outputs.lintable == 'true'
-      uses: DeterminateSystems/determinate-nix-action@c70cb8ae92d68c66953db28a26a63db1665bc837  # v3.21.5
+      uses: DeterminateSystems/determinate-nix-action@61cbfe2efc2d4e7a8a6d56967c3c1058e846c858  # v3.21.9
 
     - name: Setup Cachix
       if: steps.changes.outputs.lintable == 'true'
