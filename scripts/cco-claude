@@ -4,6 +4,11 @@ set -e
 
 name=$(basename "$0")
 mode_args=()
+
+# CCO only grants additional write access to directories that already exist.
+# Create FastEmbed's shared cache before admitting it to the sandbox.
+mkdir -p "$HOME/.fastembed_cache"
+
 common_args=(
   --allow-keychain
   --add-dir ~/.plannotator:rw
@@ -19,6 +24,7 @@ common_args=(
   --add-dir ~/.codex:rw
   --add-dir ~/.local/share/uv:rw
   --add-dir ~/.memex:rw
+  --add-dir ~/.fastembed_cache:rw
 )
 cco_args=("${common_args[@]}")
 wrapped_args=()
