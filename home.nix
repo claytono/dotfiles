@@ -4,6 +4,19 @@ let
   username = "coneill";
   homeDirectory = if pkgs.stdenv.hostPlatform.isDarwin then "/Users/${username}" else "/home/${username}";
   memexPollInterval = 300;
+  memexCacheDirectory = "${homeDirectory}/.fastembed_cache";
+
+  # FastEmbed otherwise resolves .fastembed_cache relative to the caller's
+  # working directory, and an inherited HF_HOME takes precedence during model
+  # downloads. Set both cache variables so every Memex invocation uses the
+  # model already cached under the home directory.
+  memexWithSharedCache = (pkgs.writeShellScriptBin "memex" ''
+    export FASTEMBED_CACHE_DIR="${memexCacheDirectory}"
+    export HF_HOME="${memexCacheDirectory}"
+    exec ${memexPkg}/bin/memex "$@"
+  '').overrideAttrs (_: {
+    inherit (memexPkg) pname version;
+  });
 
   launchdPath = packages:
     lib.concatStringsSep ":" (
@@ -110,7 +123,7 @@ in {
 
   programs.memex = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
-    package = memexPkg;
+    package = memexWithSharedCache;
     settings = {
       embeddings = true;
       model = "gemma";
@@ -314,7 +327,7 @@ in {
     config = {
       Label = "com.memex.index";
       ProgramArguments = [
-        "${memexPkg}/bin/memex"
+        "${memexWithSharedCache}/bin/memex"
         "index"
         "--watch"
         "--watch-interval"
@@ -323,6 +336,12 @@ in {
       EnvironmentVariables = launchdEnvironment { };
       KeepAlive = true;
       RunAtLoad = true;
+      # Continuous embedding work must yield CPU and disk bandwidth to
+      # interactive applications; ProcessType alone only applies launchd's
+      # general background resource policy.
+      ProcessType = "Background";
+      Nice = 10;
+      LowPriorityIO = true;
       WorkingDirectory = config.home.homeDirectory;
       StandardOutPath = "${config.home.homeDirectory}/.memex/index-service.log";
       StandardErrorPath = "${config.home.homeDirectory}/.memex/index-service.err.log";
