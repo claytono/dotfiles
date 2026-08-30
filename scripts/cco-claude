@@ -38,6 +38,7 @@ case "$name" in
     export OPENCODE_ENABLE_EXA=1
     ;;
   cco-codex)
+    cco_args+=(--add-dir ~/.cache/gh:rw)
     mode_args=(codex --dangerously-bypass-approvals-and-sandbox)
     ;;
   *)
