@@ -19,11 +19,6 @@ def is_virtualized?
   `ioreg -l|grep -i board-id` =~ /Virtualbox/i
 end
 
-def mas_signed_in?
-  %x(mas account) !~ /Not signed in/
-  rescue
-end
-
 def hostname
   Socket.gethostname
 end
@@ -45,7 +40,6 @@ if macos?
   tap "hmarr/tap"
   tap "heroku/brew"
   tap "yqrashawn/goku"
-  tap "candid82/brew" # Needed for goku
 
   tap "github/bootstrap" if hajnal?
   tap "github/packages" if hajnal?
