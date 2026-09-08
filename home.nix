@@ -260,7 +260,6 @@ in {
     rclone
     restic
     ripgrep
-    rtk
     socat
     timer
     tmux
