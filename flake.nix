@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    codex.url = "github:openai/codex?ref=rust-v0.153.4";
+    codex.url = "github:openai/codex?ref=rust-v0.154.0";
 
     memex = {
       url = "github:nicosuave/memex?ref=v0.11.6";
