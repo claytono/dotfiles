@@ -54,7 +54,7 @@
       memexReleasePackages = {
         aarch64-darwin = {
           asset = "macos-arm64";
-          hash = "sha256-II3dIHNjVlGvL+kAdAAC9628bS8IXlwMSV3/GeTIU5U=";
+          hash = "sha256-dsF0yxVAvnFeDcRSLfd5JGUKNuxKgjuayd5h/c6fqX0=";
         };
       };
       supportedSystems = builtins.attrNames codexReleasePackages;
