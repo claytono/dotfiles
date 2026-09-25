@@ -10,7 +10,7 @@ bash-interactive: 5.3p15
 bun: 1.4.2
 cachix: 1.12.1
 codeowners: 1.2.1
-codex: 0.155.1
+codex: 0.156.1
 curl: 8.22.0
 dagu: 2.3.8
 direnv: 2.37.1
