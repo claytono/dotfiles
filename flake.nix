@@ -36,15 +36,15 @@
       codexReleasePackages = {
         aarch64-darwin = {
           target = "aarch64-apple-darwin";
-          hash = "sha256-5uCHF9qeNbcjMu/3U1J/55qa6HYIEDPFxoIKjl9YuUM=";
+          hash = "sha256-/qQvliUJHwEeOPBZ2pdNUuV7oxgxZIuxx/Cxo4X95Uc=";
         };
         aarch64-linux = {
           target = "aarch64-unknown-linux-musl";
-          hash = "sha256-cYV9vJvqNhNBDoppz7RrB8BALW0g/sGIQ9uv/XV2NL0=";
+          hash = "sha256-/dR+1qreA2B5b9P2+VpFCW8yfBXhnoxzOfncVjMEF4Y=";
         };
         x86_64-linux = {
           target = "x86_64-unknown-linux-musl";
-          hash = "sha256-pluJXGrBpzYpu+S4ZGQMhhM+lKQ7TWezEDBE4aMG1aI=";
+          hash = "sha256-i3EVIL7d84VGe42k0sk3NmN8a6HkaBHPDYYGt8SQtvY=";
         };
       };
       memexSource = memex;
