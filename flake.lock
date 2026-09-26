@@ -92,16 +92,16 @@
     "memex": {
       "flake": false,
       "locked": {
-        "lastModified": 1787287552,
-        "narHash": "sha256-sFefGAYzG86ZO9E/eQfgQ8PeMGt2jGVlIuYOjHYbMZ0=",
+        "lastModified": 1789186272,
+        "narHash": "sha256-0BnI7n0Qiakqw5fK6izhgDcnBS/iuSyQ9xWsTXsnomI=",
         "owner": "nicosuave",
         "repo": "memex",
-        "rev": "9176bb0e2c88e5013346526c0a9750d87ee7641c",
+        "rev": "ecb846dd76195fb07ab94f3077308d68290df65a",
         "type": "github"
       },
       "original": {
         "owner": "nicosuave",
-        "ref": "v0.11.6",
+        "ref": "v0.19.6",
         "repo": "memex",
         "type": "github"
       }
