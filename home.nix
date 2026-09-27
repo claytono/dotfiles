@@ -126,7 +126,7 @@ in {
     package = memexWithSharedCache;
     settings = {
       embeddings = true;
-      model = "gemma";
+      model = "minilm";
       execution_provider = "cpu";
       auto_index_on_search = false;
       index_service_mode = "continuous";
