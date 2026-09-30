@@ -216,6 +216,7 @@ in {
     source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude-safe";
     force = true;
   };
+  home.file."bin/gh-pr-create-fill".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/gh-pr-create-fill";
 
   home.packages = with pkgs; [
     argocd
