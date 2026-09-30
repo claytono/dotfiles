@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Create a pull request from HEAD's commit message. The title is the commit
+# subject; the body is the commit body with hard-wrapped paragraphs and list
+# items joined onto single lines, because GitHub renders every newline in a PR
+# description as a line break. Blank lines, list items, and fenced code blocks
+# are preserved. Extra arguments are passed to `gh pr create`.
+set -euo pipefail
+
+reflow() {
+	awk '
+		function flush() { if (buf != "") print buf; buf = "" }
+		# Set mc/mn/mrest to the fence character, run length, and trailing text
+		# when the line opens or closes a CommonMark code fence. Counting by hand
+		# avoids regex intervals, which older BSD awk does not support.
+		function marker(line,   i, c, n) {
+			i = 1
+			while (i <= 3 && substr(line, i, 1) == " ") i++
+			c = substr(line, i, 1)
+			if (c != "`" && c != "~") return 0
+			n = 0
+			while (substr(line, i + n, 1) == c) n++
+			if (n < 3) return 0
+			mc = c; mn = n; mrest = substr(line, i + n)
+			return 1
+		}
+		fence {
+			if (marker($0) && mc == fc && mn >= fn && mrest ~ /^[[:space:]]*$/) fence = 0
+			print; next
+		}
+		marker($0) && !(mc == "`" && index(mrest, "`")) {
+			flush(); print; fence = 1; fc = mc; fn = mn; next
+		}
+		/^[[:space:]]*$/ { flush(); print ""; next }
+		/^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { flush(); buf = $0; next }
+		/^#/ { flush(); print; next }
+		# Table rows keep their own lines.
+		/^[[:space:]]*\|/ { flush(); print; next }
+		# Join wrapped blockquote lines into one quoted paragraph.
+		/^[[:space:]]*>/ {
+			if (buf ~ /^[[:space:]]*>/) {
+				line = $0
+				sub(/^[[:space:]]*>[[:space:]]*/, "", line)
+				if (line == "") { flush(); print ">"; next }
+				buf = buf " " line
+			} else { flush(); buf = $0 }
+			next
+		}
+		{ sub(/^[[:space:]]+/, "", $0); buf = (buf == "") ? $0 : buf " " $0 }
+		END { flush() }
+	'
+}
+
+if [[ "${1:-}" == "--print-body" ]]; then
+	git log -1 --format=%b | reflow
+	exit 0
+fi
+
+git log -1 --format=%b | reflow |
+	gh pr create --title "$(git log -1 --format=%s)" --body-file - "$@"
