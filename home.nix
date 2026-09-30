@@ -201,15 +201,15 @@ in {
   home.file.".tmux.conf".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/.tmux.conf";
   home.file."bin/ssh-known-hosts-update".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/ssh-known-hosts-update";
   home.file."bin/cco-claude" = {
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-wrapper";
     force = true;
   };
   home.file."bin/cco-codex" = {
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-wrapper";
     force = true;
   };
   home.file."bin/cco-opencode" = {
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-claude";
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/cco-wrapper";
     force = true;
   };
   home.file."bin/cco-claude-safe" = {
