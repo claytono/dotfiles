@@ -217,6 +217,9 @@ in {
     force = true;
   };
   home.file."bin/gh-pr-create-fill".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/gh-pr-create-fill";
+  xdg.configFile."direnv/lib/op-secrets.sh".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/config/direnv/lib/op-secrets.sh";
+  home.file."bin/op-secrets-status".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/op-secrets-status";
+  home.file."bin/op-secrets-refresh".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/op-secrets-refresh";
 
   home.packages = with pkgs; [
     argocd
