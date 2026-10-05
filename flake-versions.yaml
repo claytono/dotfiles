@@ -19,14 +19,14 @@ du-dust: 1.2.6
 fd: 10.5.0
 ffmpeg: 9.0.1
 fzf: 0.74.4
-gh: 2.101.0
+gh: 2.102.0
 git: 2.55.0
 git-crypt: 0.8.0
 htop: 3.5.3
 jq: 1.8.2
 k9s: 0.51.0
 kubecolor: 0.8.0
-kubectl: 1.37.0
+kubectl: 1.37.1
 kubectx: 0.11.0
 kubernetes-helm: 4.3.0
 lftp: 4.9.3
@@ -37,7 +37,7 @@ mtr: '0.96'
 nix-search-cli: 0.3-unstable-2025-12-03
 nmap: '7.991'
 node_exporter: 1.12.1
-nodejs: 24.20.0
+nodejs: 24.21.0
 p7zip: '17.06'
 patchutils: 0.4.2
 pre-commit: 4.6.2
@@ -55,8 +55,8 @@ todoist: 0.24.0
 uv: 0.12.17
 vim: 9.2.1001
 wget: 1.25.0
-xz: 5.8.3
+xz: 5.8.4
 yadm: 3.5.0
-yq-go: 4.53.3
+yq-go: 4.54.1
 yt-dlp: 2026.08.19
 zellij: 0.45.1
