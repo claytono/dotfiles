@@ -12,6 +12,7 @@ mkdir -p "$HOME/.fastembed_cache"
 common_args=(
   --allow-keychain
   --add-dir ~/.plannotator:rw
+  --add-dir ~/.cache/gh:rw
   --add-dir ~/.cache/nix:rw
   --add-dir ~/.cache/pre-commit:rw
   --add-dir ~/.cache/uv:rw
@@ -38,7 +39,6 @@ case "$name" in
     export OPENCODE_ENABLE_EXA=1
     ;;
   cco-codex)
-    cco_args+=(--add-dir ~/.cache/gh:rw)
     mode_args=(codex --dangerously-bypass-approvals-and-sandbox)
     ;;
   *)
