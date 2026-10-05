@@ -19,7 +19,7 @@ trap cleanup EXIT HUP INT TERM
 output="$(cd "$tmpdir" && "$@" </dev/null 2>&1)"
 rc=$?
 cleanup
-if [ "$rc" -ne 0 ] && printf '%s\n' "$output" | grep -Eq "(Limit reached|hit your limit)"; then
+if [ "$rc" -ne 0 ] && printf '%s\n' "$output" | grep -Eq "(Limit reached|hit your (session )?limit)"; then
   printf 'Usage limit detected: %s\n' "$output"
   exit 0
 fi
