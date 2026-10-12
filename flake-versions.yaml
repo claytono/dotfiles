@@ -52,7 +52,7 @@ socat: 1.8.1.3
 timer: 1.4.6
 tmux: 3.7c
 todoist: 0.24.0
-uv: 0.12.17
+uv: 0.12.22
 vim: 9.2.1001
 wget: 1.25.0
 xz: 5.8.4
