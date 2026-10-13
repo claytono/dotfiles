@@ -29,6 +29,7 @@ common_args=(
 )
 cco_args=("${common_args[@]}")
 wrapped_args=()
+user_add_dirs=()
 
 case "$name" in
   cco-claude)
@@ -51,6 +52,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --add-dir=*)
       cco_args+=("$1")
+      user_add_dirs+=("${1#--add-dir=}")
       shift
       ;;
     --add-dir)
@@ -59,6 +61,7 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       cco_args+=("$1" "$2")
+      user_add_dirs+=("$2")
       shift 2
       ;;
     *)
@@ -117,6 +120,23 @@ case "$name" in
     toml_note=${sandbox_note//\\/\\\\}
     toml_note=${toml_note//\"/\\\"}
     mode_args+=(-c "developer_instructions=\"$toml_note\"")
+    ;;
+esac
+
+# herdr-cco-resume reads these from the agent's SessionStart hook so a herdr
+# restore relaunches through this wrapper, with the same --add-dir paths,
+# instead of running the bare agent outside the sandbox. The token marks this
+# launch, so agents started from inside it can be told apart.
+case "$name" in
+  cco-claude | cco-codex)
+    export HERDR_RESUME_WRAPPER=$name
+    HERDR_RESUME_TOKEN="$$.$RANDOM.$(date +%s)"
+    export HERDR_RESUME_TOKEN
+    HERDR_RESUME_EXTRA_ARGS=""
+    for dir in "${user_add_dirs[@]}"; do
+      HERDR_RESUME_EXTRA_ARGS+="--add-dir=$dir"$'\n'
+    done
+    export HERDR_RESUME_EXTRA_ARGS
     ;;
 esac
 

@@ -14,11 +14,13 @@ cco_args=(
   --add-dir ~/.ansible:rw
 )
 wrapped_args=()
+user_add_dirs=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --add-dir=*)
       cco_args+=("$1")
+      user_add_dirs+=("${1#--add-dir=}")
       shift
       ;;
     --add-dir)
@@ -27,6 +29,7 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       cco_args+=("$1" "$2")
+      user_add_dirs+=("$2")
       shift 2
       ;;
     *)
@@ -35,5 +38,15 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# Read by herdr-cco-resume; see the matching block in cco-wrapper.
+export HERDR_RESUME_WRAPPER=cco-claude-safe
+HERDR_RESUME_TOKEN="$$.$RANDOM.$(date +%s)"
+export HERDR_RESUME_TOKEN
+HERDR_RESUME_EXTRA_ARGS=""
+for dir in "${user_add_dirs[@]}"; do
+  HERDR_RESUME_EXTRA_ARGS+="--add-dir=$dir"$'\n'
+done
+export HERDR_RESUME_EXTRA_ARGS
 
 exec cco "${cco_args[@]}" "${wrapped_args[@]}"
