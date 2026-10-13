@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# SessionStart hook for Claude Code and Codex sessions launched through
+# cco-wrapper inside herdr.
+#
+# Herdr's own integrations restore panes with a bare `claude --resume <id>`
+# or `codex resume <id>`, which would bring the agent back outside the cco
+# sandbox. This reports a resume command that goes back through the wrapper
+# with the same --add-dir paths; herdr prefers a reported command over its
+# built-in one. Sessions not started by the wrapper are left alone.
+
+set -u
+
+input=$(cat)
+
+[[ "${HERDR_ENV:-}" == 1 && -n "${HERDR_PANE_ID:-}" && -n "${HERDR_BIN_PATH:-}" ]] || exit 0
+
+case "${HERDR_RESUME_WRAPPER:-}" in
+  cco-claude | cco-claude-safe) agent=claude ;;
+  cco-codex) agent=codex ;;
+  *) exit 0 ;;
+esac
+
+log_dir="$HOME/Library/Logs"
+[[ -d "$log_dir" ]] || log_dir=${TMPDIR:-/tmp}
+log() {
+  printf '%s pane=%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$HERDR_PANE_ID" "$*" \
+    >>"$log_dir/herdr-cco-resume.log" 2>/dev/null
+}
+
+# Herdr ignores a report whose sequence is not newer than the last one it
+# accepted from this source, and still answers with success. Every report
+# needs a fresh value, which EPOCHREALTIME's microsecond clock (bash 5+)
+# provides.
+if [[ -z "${EPOCHREALTIME:-}" ]]; then
+  log "bash $BASH_VERSION has no EPOCHREALTIME; not reporting"
+  exit 0
+fi
+
+field() {
+  jq -r --arg key "$1" '.[$key] // empty | strings' <<<"$input" 2>/dev/null
+}
+
+event=$(field hook_event_name)
+session_id=$(field session_id)
+
+[[ -z "$event" || "$event" == SessionStart ]] || exit 0
+# Subagents share the pane with their parent session.
+[[ -z "$(field agent_id)" ]] || exit 0
+[[ -n "$session_id" ]] || exit 0
+# Sessions without a transcript cannot be resumed. This also skips Codex's
+# internal memory-consolidation worker, which runs SessionStart hooks in the
+# user's pane (openai/codex#52442).
+[[ -n "$(field transcript_path)" ]] || exit 0
+# Codex started from inside another Codex session inherits its thread ID.
+if [[ "$agent" == codex && -n "${CODEX_THREAD_ID:-}" && "$CODEX_THREAD_ID" != "$session_id" ]]; then
+  exit 0
+fi
+
+argv=("$HERDR_RESUME_WRAPPER")
+while IFS= read -r add_dir; do
+  [[ -n "$add_dir" ]] || continue
+  # Herdr rejects resume commands containing apostrophes. Dropping the
+  # directory resumes with less access, never more.
+  if [[ "$add_dir" == *"'"* ]]; then
+    log "dropping $add_dir: herdr cannot express apostrophes"
+    continue
+  fi
+  argv+=("$add_dir")
+done <<<"${HERDR_RESUME_EXTRA_ARGS:-}"
+
+case "$agent" in
+  claude) argv+=(--resume "$session_id") ;;
+  codex) argv+=(resume "$session_id") ;;
+esac
+
+# Herdr's CLI waits on its socket without a timeout, so bound each call. A
+# hung call would otherwise hold the pane's lock indefinitely.
+herdr_timeout=5
+report() {
+  local status
+  output=$(timeout "$herdr_timeout" "$HERDR_BIN_PATH" pane report-agent-session \
+    "$HERDR_PANE_ID" --source cco --agent "$agent" --seq "${EPOCHREALTIME/[.,]/}" \
+    -- "${argv[@]}" 2>&1)
+  status=$?
+  ((status != 124)) || output="herdr did not answer within ${herdr_timeout}s"
+  return "$status"
+}
+
+# Marks the newest session in this pane so retries for older ones stop.
+# Pane IDs repeat across named herdr sessions, so key on the session's socket
+# as well.
+herdr_session=$(printf '%s' "${HERDR_SOCKET_PATH:-}" | cksum | cut -d' ' -f1)
+latest="${TMPDIR:-/tmp}/herdr-cco-resume.$herdr_session.${HERDR_PANE_ID//[^A-Za-z0-9]/_}"
+lock="$latest.lock"
+
+# The marker also records which wrapper launch the session belongs to.
+# Everything started from inside that launch, such as a nested `claude -p`,
+# inherits its token. Only the launch's first session may come from startup;
+# later ones must be a clear, resume or compact of it, which is the same rule
+# herdr applies to its own Claude sessions.
+token=${HERDR_RESUME_TOKEN:--}
+read -r latest_token latest_session 2>/dev/null <"$latest"
+if [[ "$(field source)" == startup && "$token" != - && "${latest_token:-}" == "$token" ]]; then
+  exit 0
+fi
+printf '%s %s\n' "$token" "$session_id" >"$latest"
+
+take_lock() {
+  local attempt
+  for attempt in {1..20}; do
+    mkdir "$lock" 2>/dev/null && return 0
+    # A hook killed while holding the lock would otherwise block this pane
+    # for good.
+    find "$lock" -maxdepth 0 -mmin +1 -exec rmdir {} \; 2>/dev/null
+    sleep 0.1
+  done
+  return 1
+}
+
+# Reports only while this is still the pane's newest session, returning 2
+# once a newer one has taken over. Holding the lock across the check and the
+# report keeps a retry for an older session from replacing a newer session's
+# command between the two.
+report_latest() {
+  local status
+  if ! take_lock; then
+    output="timed out waiting for $lock"
+    return 1
+  fi
+  latest_session=""
+  read -r _ latest_session 2>/dev/null <"$latest"
+  if [[ "$latest_session" == "$session_id" ]]; then
+    # herdr's own usage errors also exit 2, which must not read as superseded.
+    if report; then status=0; else status=1; fi
+  else
+    status=2
+  fi
+  rmdir "$lock"
+  return "$status"
+}
+
+# Every report, the first included, runs in the background so a slow or
+# unresponsive herdr cannot hold up the agent's startup. Herdr only accepts
+# the command once it has detected the agent in the pane, which can lag
+# SessionStart, especially in a pane herdr just restored, so keep retrying
+# until then. Also keep retrying while an older session's report holds the
+# lock or herdr does not answer, or an older report could land last. A newer session in the same pane
+# supersedes this one.
+(
+  for attempt in {0..20}; do
+    ((attempt == 0)) || sleep 0.5
+    report_latest
+    case $? in
+      0)
+        retries=""
+        ((attempt == 0)) || retries=" after $attempt retries"
+        log "reported ${argv[*]}$retries"
+        exit 0
+        ;;
+      2) exit 0 ;;
+    esac
+    case "$output" in
+      *resume_not_accepted* | "timed out waiting for $lock" | "herdr did not answer"*) ;;
+      *) break ;;
+    esac
+  done
+  log "could not report ${argv[*]}: $output"
+) </dev/null >/dev/null 2>&1 &
+disown
