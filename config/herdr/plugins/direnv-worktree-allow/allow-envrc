@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Runs on herdr's worktree.created event. direnv approves each .envrc by its
+# path, so a new worktree's .envrc starts out blocked even when it is the same
+# file already approved in the main checkout. Approve it only in that case:
+# the content is identical and the main checkout's copy is allowed. A branch
+# with a different .envrc stays blocked until approved by hand.
+
+set -euo pipefail
+
+worktree=$(jq -r '.data.worktree.path // empty' <<<"${HERDR_PLUGIN_EVENT_JSON:-}")
+[[ -n "$worktree" && -f "$worktree/.envrc" ]] || exit 0
+
+if ! command -v direnv >/dev/null; then
+  echo "direnv not found on PATH" >&2
+  exit 1
+fi
+
+# The first entry is the main working tree. A bare repo has no .envrc there,
+# so it falls out at the comparison below.
+main=$(git -C "$worktree" worktree list --porcelain | sed -n '1s/^worktree //p')
+if [[ -z "$main" || "$main" == "$worktree" ]]; then
+  exit 0
+fi
+
+if ! cmp -s "$main/.envrc" "$worktree/.envrc"; then
+  echo "$worktree/.envrc differs from $main/.envrc; leaving it blocked"
+  exit 0
+fi
+
+# allowed is 0 when direnv has approved this exact content at this path. The
+# path check rules out a parent directory's .envrc being the one found.
+status=$(cd "$main" && direnv status --json)
+if [[ "$(jq -r '.state.foundRC.path // empty' <<<"$status")" != "$main/.envrc" ||
+  "$(jq -r '.state.foundRC.allowed // empty' <<<"$status")" != 0 ]]; then
+  echo "$main/.envrc is not allowed; leaving $worktree/.envrc blocked"
+  exit 0
+fi
+
+direnv allow "$worktree/.envrc"
+echo "allowed $worktree/.envrc"

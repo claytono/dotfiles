@@ -1,0 +1,10 @@
+id = "claytono.direnv-worktree-allow"
+name = "direnv worktree allow"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Allow a new worktree's .envrc when it matches the main checkout's allowed one"
+platforms = ["linux", "macos"]
+
+[[events]]
+on = "worktree.created"
+command = ["./allow-envrc"]
