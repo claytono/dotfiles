@@ -9,6 +9,13 @@ if [ -n "${GHOSTTY_RESOURCES_DIR}" ] && [ -f "${GHOSTTY_RESOURCES_DIR}/shell-int
   builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/bash/ghostty.bash"
 fi
 
+# herdr passes OSC 8 hyperlinks through but sets TERM_PROGRAM=herdr, which
+# Claude Code doesn't recognize, so markdown links render as "text (url)".
+# Remove once https://github.com/anthropics/claude-code/issues/101490 ships.
+if [ "${TERM_PROGRAM:-}" = herdr ]; then
+  export FORCE_HYPERLINK=1
+fi
+
 # From: https://github.com/mrzool/bash-sensible/
 # Update window size after every command
 shopt -s checkwinsize
