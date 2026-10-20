@@ -125,9 +125,11 @@ in {
     enable = true;
     package = memexWithSharedCache;
     settings = {
-      embeddings = true;
-      model = "minilm";
-      execution_provider = "cpu";
+      # Embed on the cluster's Ollama GPU over Tailscale, sharing the model
+      # karakeep already keeps loaded, instead of on the Mac CPU.
+      embeddings = "remote";
+      model = "snowflake-arctic-embed2:latest";
+      embedding_base_url = "https://ollama.cow-banjo.ts.net/v1";
       auto_index_on_search = false;
       index_service_mode = "continuous";
       index_service_poll_interval = memexPollInterval;
