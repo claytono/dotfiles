@@ -128,7 +128,7 @@ in {
       # Embed on the cluster's Ollama GPU over Tailscale, sharing the model
       # karakeep already keeps loaded, instead of on the Mac CPU.
       embeddings = "remote";
-      model = "snowflake-arctic-embed2:latest";
+      model = "snowflake-arctic-embed2:mine";
       embedding_base_url = "https://ollama.cow-banjo.ts.net/v1";
       auto_index_on_search = false;
       index_service_mode = "continuous";
