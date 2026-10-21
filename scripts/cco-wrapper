@@ -22,6 +22,7 @@ common_args=(
   --add-dir ~/.docker:rw
   --add-dir ~/.ansible:rw
   --add-dir ~/.config/superpowers:rw
+  --add-dir ~/.config/herdr:rw
   --add-dir ~/.codex:rw
   --add-dir ~/.local/share/uv:rw
   --add-dir ~/.memex:rw

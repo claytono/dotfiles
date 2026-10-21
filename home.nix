@@ -115,6 +115,8 @@ let
   '';
 
 in {
+  imports = [ ./config/herdr/herdr.nix ];
+
   home.username = username;
   home.homeDirectory = homeDirectory;
   home.stateVersion = "24.05";
@@ -246,7 +248,6 @@ in {
     fzf
     gh
     git-crypt
-    herdr
     kubernetes-helm
     htop
     jq
@@ -361,13 +362,6 @@ in {
   home.activation.daguDataDir = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/dagu"
   '');
-
-  # herdr records linked plugins in its own ~/.config/herdr/plugins.json, so
-  # register them here. Linking an already-linked path is a no-op.
-  home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    run ${pkgs.herdr}/bin/herdr plugin link \
-      "${config.home.homeDirectory}/src/dotfiles/config/herdr/plugins/direnv-worktree-allow" >/dev/null
-  '';
 
   home.activation.prometheusExportersDataDir = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "${config.home.homeDirectory}/.local/share/prometheus-exporters"
