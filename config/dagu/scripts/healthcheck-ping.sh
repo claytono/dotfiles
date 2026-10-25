@@ -5,6 +5,7 @@
 # Environment (set by Dagu and dagu-wrapper.sh):
 #   DAG_NAME              - name of the DAG (e.g., "cleanup-nix")
 #   DAG_RUN_STATUS        - "succeeded", "failed", etc.
+#   HEALTHCHECK_SKIP_FAIL - set to "1" in a DAG's env to skip failure pings
 #   DAGU_HEALTHCHECK_API_KEY   - management API key for creating checks
 #   DAGU_HEALTHCHECK_PING_KEY  - ping key for pinging checks
 #
@@ -46,6 +47,12 @@ case "${DAG_RUN_STATUS:-}" in
     curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "${PING_BODY}" "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}"
     ;;
   *)
+    # Let the check's timeout catch repeated failures instead of alerting on
+    # every failed run
+    if [[ "${HEALTHCHECK_SKIP_FAIL:-}" == "1" ]]; then
+      echo "Skipping failure ping (HEALTHCHECK_SKIP_FAIL=1)"
+      exit 0
+    fi
     curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "${PING_BODY}" "${HC_HOST}/ping/${DAGU_HEALTHCHECK_PING_KEY}/${CHECK_NAME}/fail"
     ;;
 esac
