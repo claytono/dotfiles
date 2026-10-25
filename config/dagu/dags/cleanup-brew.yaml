@@ -1,0 +1,6 @@
+---
+schedule: 0 9 * * 0
+queue: cleanup
+steps:
+- id: cleanup
+  command: brew cleanup --prune=30
