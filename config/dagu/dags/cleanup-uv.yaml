@@ -1,6 +1,8 @@
 ---
-schedule: 0 3 * * 0
+schedule: 0 3 * * *
 queue: cleanup
+env:
+- HEALTHCHECK_SKIP_FAIL: '1'
 steps:
 - id: cache_prune
   command: uv cache prune
