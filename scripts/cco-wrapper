@@ -11,6 +11,7 @@ mkdir -p "$HOME/.fastembed_cache"
 
 common_args=(
   --allow-keychain
+  --add-dir ~/src:rw
   --add-dir ~/.plannotator:rw
   --add-dir ~/.cache/gh:rw
   --add-dir ~/.cache/nix:rw
@@ -28,6 +29,11 @@ common_args=(
   --add-dir ~/.memex:rw
   --add-dir ~/.fastembed_cache:rw
 )
+# cco aborts on a missing --add-dir path, and only machines that sync the
+# Obsidian vault have it.
+if [[ -d ~/Documents/Obsidian ]]; then
+  common_args+=(--add-dir ~/Documents/Obsidian:rw)
+fi
 cco_args=("${common_args[@]}")
 wrapped_args=()
 user_add_dirs=()
