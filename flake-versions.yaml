@@ -2,9 +2,9 @@
 # Auto-generated from flake.lock — do not edit
 # Regenerate with: scripts/gen-flake-versions
 
-argocd: 3.4.6
+argocd: 3.5.6
 atool: 0.39.0
-atuin: 18.24.2
+atuin: 18.24.4
 bash-completion: 2.18.0
 bash-interactive: 5.3p20
 bun: 1.4.2
@@ -19,7 +19,7 @@ du-dust: 1.2.6
 fd: 10.5.0
 ffmpeg: 9.0.2
 fzf: 0.74.5
-gh: 2.103.2
+gh: 2.103.3
 git: 2.56.0
 git-crypt: 0.8.0
 herdr: 0.9.5
@@ -27,7 +27,7 @@ htop: 3.5.3
 jq: 1.8.2
 k9s: 0.51.0
 kubecolor: 0.8.0
-kubectl: 1.37.1
+kubectl: 1.37.2
 kubectx: 0.11.0
 kubernetes-helm: 4.3.1
 lftp: 4.9.3
@@ -53,11 +53,11 @@ socat: 1.8.1.3
 timer: 1.4.6
 tmux: '3.8'
 todoist: 0.24.0
-uv: 0.13.4
+uv: 0.13.5
 vim: 9.2.1164
 wget: 1.25.0
 xz: 5.8.4
 yadm: 3.5.0
 yq-go: 4.54.1
-yt-dlp: 2026.08.19
+yt-dlp: 2026.10.21
 zellij: 0.45.1
