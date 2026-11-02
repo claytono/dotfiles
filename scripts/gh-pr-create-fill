@@ -4,6 +4,8 @@
 # items joined onto single lines, because GitHub renders every newline in a PR
 # description as a line break. Blank lines, list items, and fenced code blocks
 # are preserved. Extra arguments are passed to `gh pr create`.
+# With --push first, HEAD is pushed to a branch of the same name on origin
+# and set as its upstream before the pull request is created.
 set -euo pipefail
 
 reflow() {
@@ -53,6 +55,11 @@ reflow() {
 if [[ "${1:-}" == "--print-body" ]]; then
 	git log -1 --format=%b | reflow
 	exit 0
+fi
+
+if [[ "${1:-}" == "--push" ]]; then
+	shift
+	git push -u origin HEAD
 fi
 
 git log -1 --format=%b | reflow |
