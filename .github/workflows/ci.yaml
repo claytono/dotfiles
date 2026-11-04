@@ -38,5 +38,7 @@ jobs:
           precommit-
 
     - name: Run lint
-      run: nix develop --command ./scripts/lint --from-ref origin/${{ github.base_ref || 'main' }}
-        --to-ref HEAD
+      run: nix develop --command ./scripts/lint --from-ref "origin/$BASE_REF" --to-ref
+        HEAD
+      env:
+        BASE_REF: ${{ github.base_ref || 'main' }}
