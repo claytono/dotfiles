@@ -49,7 +49,10 @@ font-size = 11.5
 font-thicken = true
 
 shell-integration-features = ssh-terminfo,ssh-env
-scrollback-limit = 655360
+
+# Ghostty 1.4 changed the macOS default to `none`; `primary` keeps the
+# 1.3 behavior of copying selections for middle-click / Paste Selection
+copy-on-select = primary
 
 # Launch nix bash directly to enable proper shell integration detection
 # (bypasses macOS /usr/bin/login → /bin/bash chain that breaks detection)
