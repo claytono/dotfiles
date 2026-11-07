@@ -6,7 +6,7 @@
     codex.url = "github:openai/codex?ref=rust-v0.166.0";
 
     memex = {
-      url = "github:nicosuave/memex?ref=v0.27.1";
+      url = "github:nicosuave/memex?ref=v0.31.1";
       flake = false;
     };
 
@@ -54,7 +54,7 @@
       memexReleasePackages = {
         aarch64-darwin = {
           asset = "macos-arm64";
-          hash = "sha256-p93nqFZpwNBqQXJp+foEjQ8XLL1X2pviKYmhFNTkvaw=";
+          hash = "sha256-fCCCl0jDOcSrz16vBnPzHWYDSvSnUijuBe46WJZdWxg=";
         };
       };
       supportedSystems = builtins.attrNames codexReleasePackages;
