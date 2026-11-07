@@ -6,7 +6,7 @@
     codex.url = "github:openai/codex?ref=rust-v0.166.0";
 
     memex = {
-      url = "github:nicosuave/memex?ref=v0.27.1";
+      url = "github:nicosuave/memex?ref=v0.31.1";
       flake = false;
     };
 
