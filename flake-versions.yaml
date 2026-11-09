@@ -52,7 +52,7 @@ ripgrep: 15.2.0
 socat: 1.8.1.3
 timer: 1.4.6
 tmux: '3.8'
-todoist: 0.24.0
+todoist-cli: 5.8.4
 uv: 0.13.5
 vim: 9.2.1164
 wget: 1.25.0
