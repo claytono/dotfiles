@@ -228,6 +228,7 @@ in {
   xdg.configFile."direnv/lib/op-secrets.sh".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/config/direnv/lib/op-secrets.sh";
   home.file."bin/op-secrets-status".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/op-secrets-status";
   home.file."bin/op-secrets-refresh".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/op-secrets-refresh";
+  home.file."bin/op-secret".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/src/dotfiles/scripts/op-secret";
 
   home.packages = with pkgs; [
     argocd
