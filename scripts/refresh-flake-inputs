@@ -159,6 +159,7 @@ def build_flake_target(build_target: str, *, cwd: Path) -> bool:
             ["nix", "build", "--no-link", "--print-build-logs", build_target],
             cwd=cwd,
             text=True,
+            check=False,
         ).returncode
         == 0
     )

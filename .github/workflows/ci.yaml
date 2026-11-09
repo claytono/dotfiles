@@ -37,8 +37,32 @@ jobs:
         restore-keys: |
           precommit-
 
+    # Hook versions, linter configs, and the dev shell's tools can change
+    # results for files a PR doesn't touch, so lint everything when they do.
+    - name: Check for lint tooling changes
+      uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4
+      id: changes
+      with:
+        filters: |
+          tooling:
+            - 'flake.nix'
+            - 'flake.lock'
+            - '.pre-commit-config.yaml'
+            - '.markdownlint.yaml'
+            - '.shellcheckrc'
+            - '.yamlfix.toml'
+            - '.yamllint.yaml'
+            - '.zizmor.yml'
+            - 'scripts/lint'
+            - '.github/workflows/ci.yaml'
+
     - name: Run lint
-      run: nix develop --command ./scripts/lint --from-ref "origin/$BASE_REF" --to-ref
-        HEAD
+      run: |
+        if [ "$LINT_ALL_FILES" = true ]; then
+          nix develop --command ./scripts/lint --all-files
+        else
+          nix develop --command ./scripts/lint --from-ref "origin/$BASE_REF" --to-ref HEAD
+        fi
       env:
         BASE_REF: ${{ github.base_ref || 'main' }}
+        LINT_ALL_FILES: ${{ steps.changes.outputs.tooling }}

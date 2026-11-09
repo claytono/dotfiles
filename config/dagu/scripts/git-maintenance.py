@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 STATE_FILE = Path(
@@ -26,7 +26,7 @@ CLEANUP_GRACE_DAYS = 7
 
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def iso(dt: datetime) -> str:
@@ -34,7 +34,7 @@ def iso(dt: datetime) -> str:
 
 
 def parse_iso(s: str) -> datetime:
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return datetime.fromisoformat(s)
 
 
 def repo_weekday(name: str) -> int:
@@ -128,6 +128,7 @@ def run_gc(repo: Path) -> tuple[bool, str]:
             cwd=repo,
             capture_output=True,
             text=True,
+            check=False,
             timeout=7200,
         )
         output = result.stdout + result.stderr
@@ -164,6 +165,7 @@ def run_cleanup(repo: Path) -> tuple[bool, str] | None:
             cwd=repo,
             capture_output=True,
             text=True,
+            check=False,
             timeout=300,
         )
         output = result.stdout + result.stderr
@@ -209,6 +211,7 @@ def ping_healthchecks(report: str, failed: bool) -> None:
         input=create_payload,
         capture_output=True,
         text=True,
+        check=False,
     )
 
     # Ping with report body
@@ -230,6 +233,7 @@ def ping_healthchecks(report: str, failed: bool) -> None:
         ],
         input=report,
         text=True,
+        check=False,
     )
 
 
