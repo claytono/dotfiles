@@ -56,7 +56,7 @@ class RunRefreshTest(unittest.TestCase):
         hash_fixes = []
         updates = []
 
-        def fake_build(args, *, cwd, text):
+        def fake_build(args, *, cwd, text, check):
             builds.append((tuple(args), cwd, text))
             return subprocess.CompletedProcess(args, build_results.pop(0))
 
@@ -114,7 +114,7 @@ class RunRefreshTest(unittest.TestCase):
         build_count = 0
         diff = "existing flake update diff"
 
-        def fake_build(args, *, cwd, text):
+        def fake_build(args, *, cwd, text, check):
             nonlocal build_count
             build_count += 1
             return subprocess.CompletedProcess(args, 1)
@@ -212,7 +212,7 @@ class RunRefreshTest(unittest.TestCase):
             (repo / "flake.nix").write_text(flake_nix)
             events = []
 
-            def fake_build(args, *, cwd, text):
+            def fake_build(args, *, cwd, text, check):
                 events.append(("build", tuple(args)))
                 return subprocess.CompletedProcess(args, 0)
 

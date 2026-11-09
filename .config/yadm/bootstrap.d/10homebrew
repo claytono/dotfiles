@@ -9,7 +9,7 @@ if [[ -z "$SKIP_HOMEBREW" ]]; then
       PATH=/home/linuxbrew/.linuxbrew/bin:$PATH
     if [[ "$CODESPACES" == "true" && -z "$SKIP_CACHE" ]]; then
       sudo mkdir -p /home/linuxbrew/.linuxbrew
-      sudo chown --reference $HOME /home/linuxbrew/.linuxbrew
+      sudo chown --reference "$HOME" /home/linuxbrew/.linuxbrew
       docker pull ghcr.io/claytono/linuxbrew-cache:latest
       docker rm -f linuxbrew-cache || true
       docker create --name linuxbrew-cache ghcr.io/claytono/linuxbrew-cache:latest true

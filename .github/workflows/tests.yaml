@@ -1,0 +1,50 @@
+---
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+
+    # The job always runs so it can be a required check; the test steps
+    # only run when something they exercise changed.
+    - name: Check for test-relevant changes
+      uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4
+      id: changes
+      with:
+        filters: |
+          tests:
+            - 'tests/**'
+            - 'scripts/**'
+            - 'flake.nix'
+            - 'flake.lock'
+            - '.github/workflows/tests.yaml'
+
+    - name: Install Nix
+      if: steps.changes.outputs.tests == 'true'
+      uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b  # v31
+      with:
+        github_access_token: ${{ github.token }}
+
+    - name: Setup Cachix
+      if: steps.changes.outputs.tests == 'true'
+      uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
+      with:
+        name: claytono
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+    - name: Run tests
+      if: steps.changes.outputs.tests == 'true'
+      run: nix develop --command python3 -m unittest discover -s tests -v
