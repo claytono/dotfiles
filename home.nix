@@ -275,7 +275,7 @@ in {
     socat
     timer
     tmux
-    todoist
+    todoist-cli
     uv
     vim
     wget
