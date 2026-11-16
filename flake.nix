@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    codex.url = "github:openai/codex?ref=rust-v0.167.0";
+    codex.url = "github:openai/codex?ref=rust-v0.169.0";
 
     memex = {
       url = "github:nicosuave/memex?ref=v0.31.1";
@@ -36,15 +36,15 @@
       codexReleasePackages = {
         aarch64-darwin = {
           target = "aarch64-apple-darwin";
-          hash = "sha256-r0XtRdlA15mICWIsHAKW0wmO19f61pUoRCLCKL1FRRc=";
+          hash = "sha256-iiMiYN96EsXoPgtLdlnhyNklm0GUJRe8AGjYq1XDZGE=";
         };
         aarch64-linux = {
           target = "aarch64-unknown-linux-musl";
-          hash = "sha256-DeJh7PHn8wKKeVLwP8ogk/dJJ304WQt4uzL4VndWu7c=";
+          hash = "sha256-yNC0qyqXxZW3CxBBLTbQ1UZNzvHh0yRrBz1IAXzfWk8=";
         };
         x86_64-linux = {
           target = "x86_64-unknown-linux-musl";
-          hash = "sha256-O7916D3mtYrtKPLPbjOtQj7DH9RwChRXuUvlV+pafG4=";
+          hash = "sha256-O47QkRScxjpZBGufCUvPohzbTdoV7eRBzjabzuSnG6A=";
         };
       };
       memexSource = memex;
