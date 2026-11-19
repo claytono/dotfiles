@@ -99,12 +99,88 @@ class IsDescendantTest(unittest.TestCase):
         self.assertFalse(op_secret.is_descendant(self.TABLE, 999, 50, 100))
 
 
+class CommandRefsTest(unittest.TestCase):
+    def refs(self, command):
+        return op_secret.command_refs(command)
+
+    def test_plain_and_quoted_references(self):
+        self.assertEqual(
+            self.refs('op-secret run "N=op-secret://Private/Notion/API Token" -- x'),
+            {"op-secret://Private/Notion/API Token"},
+        )
+
+    def test_reference_inside_sh_c(self):
+        self.assertEqual(
+            self.refs("""cd /x && sh -c 'op-secret run "N=op-secret://a/b c" -- t'"""),
+            {"op-secret://a/b c"},
+        )
+
+    def test_check_and_forget_arguments_are_ignored(self):
+        self.assertEqual(
+            self.refs(
+                "op-secret check A=op-secret://a/b/c && op-secret run B=op-secret://d/e/f -- t"
+            ),
+            {"op-secret://d/e/f"},
+        )
+        self.assertEqual(self.refs("op-secret forget op-secret://a/b/c"), set())
+
+    def test_other_text_is_ignored(self):
+        self.assertEqual(self.refs("grep -r 'op://infra' ."), set())
+        self.assertEqual(self.refs("grep -rl 'op-secret://' ."), set())
+
+    def test_unparseable_command_still_finds_references(self):
+        self.assertEqual(
+            self.refs("op-secret run X=op-secret://a/b/c -- echo 'unclosed"),
+            {"op-secret://a/b/c"},
+        )
+
+
+class HookFailClosedTest(unittest.TestCase):
+    def test_malformed_input_asks(self):
+        with (
+            patch("sys.stdin", io.StringIO("not json")),
+            contextlib.redirect_stdout(io.StringIO()) as out,
+        ):
+            self.assertEqual(op_secret.cmd_hook([]), 0)
+        self.assertEqual(
+            json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"],
+            "ask",
+        )
+
+    def test_unknown_session_asks(self):
+        event = {
+            "session_id": "no-such-session",
+            "tool_name": "Bash",
+            "tool_input": {"command": "op-secret run X=op-secret://a/b/c -- true"},
+        }
+        env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE")}
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch("sys.stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stdout(io.StringIO()) as out,
+        ):
+            op_secret.cmd_hook([])
+        self.assertEqual(
+            json.loads(out.getvalue())["hookSpecificOutput"]["permissionDecision"],
+            "ask",
+        )
+
+
 class ValidationTest(unittest.TestCase):
+    def test_plain_op_references_are_refused_with_the_right_form(self):
+        with self.assertRaisesRegex(op_secret.Error, "use op-secret://a/b/c instead"):
+            op_secret.check_ref("op://a/b/c")
+
+    def test_template_asks_1password_for_op_references(self):
+        template = op_secret.build_template(["op-secret://a/b/c"], "d" * 32)
+        self.assertIn("{{ op://a/b/c }}", template)
+        self.assertNotIn("op-secret://", template)
+
     def test_trailing_newline_is_rejected(self):
         with self.assertRaises(op_secret.Error):
             op_secret.check_name("FELIX\n")
         with self.assertRaises(op_secret.Error):
-            op_secret.check_ref("op://v/item/field\n")
+            op_secret.check_ref("op-secret://v/item/field\n")
 
     def test_pid_one_is_refused(self):
         with self.assertRaises(op_secret.Error):
@@ -116,11 +192,11 @@ class ValidationTest(unittest.TestCase):
     def test_accepts_normal_assignments(self):
         refs = op_secret.parse_assignments(
             [
-                "FELIX=op://infra/felix/api-server-key",
-                "NOTION=op://Private/Notion/API Token",
+                "FELIX=op-secret://infra/felix/api-server-key",
+                "NOTION=op-secret://Private/Notion/API Token",
             ]
         )
-        self.assertEqual(refs["NOTION"], "op://Private/Notion/API Token")
+        self.assertEqual(refs["NOTION"], "op-secret://Private/Notion/API Token")
 
     def test_rejects_dangerous_names(self):
         for name in (
@@ -131,10 +207,16 @@ class ValidationTest(unittest.TestCase):
             "PYTHONPATH",
         ):
             with self.assertRaises(op_secret.Error, msg=name):
-                op_secret.parse_assignments([f"{name}=op://a/b/c"])
+                op_secret.parse_assignments([f"{name}=op-secret://a/b/c"])
 
     def test_rejects_bad_refs(self):
-        for ref in ("https://x", "op://a/b/c}}", "op://a/b\n/c", ""):
+        for ref in (
+            "https://x",
+            "op://a/b/c",
+            "op-secret://a/b/c}}",
+            "op-secret://a/b\n/c",
+            "",
+        ):
             with self.assertRaises(op_secret.Error, msg=ref):
                 op_secret.parse_assignments([f"X={ref}"])
 
@@ -145,7 +227,7 @@ class ValidationTest(unittest.TestCase):
 
 class InjectTemplateTest(unittest.TestCase):
     def test_round_trip_with_multiline_value(self):
-        refs = ["op://a/b/c", "op://d/e/f"]
+        refs = ["op-secret://a/b/c", "op-secret://d/e/f"]
         delim = secrets.token_hex(16)
         template = op_secret.build_template(refs, delim)
         # Simulate op inject substituting each {{ ref }}.
@@ -154,12 +236,13 @@ class InjectTemplateTest(unittest.TestCase):
         )
         values = op_secret.parse_injected(output + "\n", refs, delim)
         self.assertEqual(
-            values, {"op://a/b/c": "line1\nline2", "op://d/e/f": "plain-value"}
+            values,
+            {"op-secret://a/b/c": "line1\nline2", "op-secret://d/e/f": "plain-value"},
         )
 
     def test_rejects_unexpected_output(self):
         with self.assertRaises(op_secret.Error):
-            op_secret.parse_injected("garbage", ["op://a/b/c"], "x" * 32)
+            op_secret.parse_injected("garbage", ["op-secret://a/b/c"], "x" * 32)
 
 
 class MaskerTest(unittest.TestCase):
@@ -263,9 +346,13 @@ class FakeOpTest(unittest.TestCase):
         return [json.loads(line) for line in self.log.read_text().splitlines()]
 
     def test_resolves_batch_in_one_call_and_a_new_session(self):
-        values = op_secret.op_inject(["op://a/b/c", "op://d/e/f"])
+        values = op_secret.op_inject(["op-secret://a/b/c", "op-secret://d/e/f"])
         self.assertEqual(
-            values, {"op://a/b/c": "line1\nline2-value", "op://d/e/f": "plain-value-1"}
+            values,
+            {
+                "op-secret://a/b/c": "line1\nline2-value",
+                "op-secret://d/e/f": "plain-value-1",
+            },
         )
         calls = self.calls()
         self.assertEqual(len(calls), 1)
@@ -277,16 +364,17 @@ class FakeOpTest(unittest.TestCase):
     def test_denial_passes_1password_message_through(self):
         self.env["FAKE_OP_FAIL"] = "1"
         with self.assertRaisesRegex(op_secret.Error, "authorization denied"):
-            op_secret.op_inject(["op://a/b/c"])
+            op_secret.op_inject(["op-secret://a/b/c"])
 
     def test_unknown_item(self):
         with self.assertRaisesRegex(op_secret.Error, "could not find item op://x/y/z"):
-            op_secret.op_inject(["op://x/y/z"])
+            op_secret.op_inject(["op-secret://x/y/z"])
 
     def test_carriage_returns_are_kept(self):
         self.env["FAKE_OP_VALUES"] = json.dumps({"op://a/b/c": "pass\r\nword-1"})
         self.assertEqual(
-            op_secret.op_inject(["op://a/b/c"]), {"op://a/b/c": "pass\r\nword-1"}
+            op_secret.op_inject(["op-secret://a/b/c"]),
+            {"op-secret://a/b/c": "pass\r\nword-1"},
         )
 
     def test_helper_end_to_end(self):
@@ -303,7 +391,11 @@ class FakeOpTest(unittest.TestCase):
         thread.start()
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.connect(helper.paths["sock"])
-            request = {"op": "get", "token": helper.token, "refs": {"X": "op://d/e/f"}}
+            request = {
+                "op": "get",
+                "token": helper.token,
+                "refs": {"X": "op-secret://d/e/f"},
+            }
             s.sendall(json.dumps(request).encode() + b"\n")
             reply = json.loads(s.makefile().readline())
         thread.join()
@@ -317,8 +409,8 @@ class HelperTest(unittest.TestCase):
     def setUp(self):
         self.calls = []
         self.values = {
-            "op://v/item/field": "s3cret-value-123",
-            "op://v/item/short": "abc",
+            "op-secret://v/item/field": "s3cret-value-123",
+            "op-secret://v/item/short": "abc",
         }
         self.fail_with = None
         self.session = f"test-{secrets.token_hex(4)}"
@@ -395,10 +487,10 @@ class HelperTest(unittest.TestCase):
         return result
 
     def test_get_caches_after_first_fetch(self):
-        get = {"op": "get", "refs": {"X": "op://v/item/field"}}
+        get = {"op": "get", "refs": {"X": "op-secret://v/item/field"}}
         self.assertEqual(self.raw(get)["values"], {"X": "s3cret-value-123"})
         self.assertEqual(self.raw(get)["values"], {"X": "s3cret-value-123"})
-        self.assertEqual(self.calls, [["op://v/item/field"]])
+        self.assertEqual(self.calls, [["op-secret://v/item/field"]])
 
     def test_refresh_files_keeps_tmp_cleaner_away(self):
         old = time.time() - 5 * 24 * 3600
@@ -418,7 +510,7 @@ class HelperTest(unittest.TestCase):
 
     def test_wrong_token_is_refused(self):
         reply = self.raw(
-            {"op": "get", "refs": {"X": "op://v/item/field"}}, token="nope"
+            {"op": "get", "refs": {"X": "op-secret://v/item/field"}}, token="nope"
         )
         self.assertFalse(reply["ok"])
         self.assertIn("token", reply["error"])
@@ -426,14 +518,14 @@ class HelperTest(unittest.TestCase):
 
     def test_failure_is_remembered_without_reprompting(self):
         self.fail_with = "1Password: authorization denied"
-        get = {"op": "get", "refs": {"X": "op://v/item/field"}}
+        get = {"op": "get", "refs": {"X": "op-secret://v/item/field"}}
         self.assertIn("denied", self.raw(get)["error"])
         self.assertIn("ask the user", self.raw(get)["error"])
         self.assertEqual(len(self.calls), 1)
 
     def test_unexpected_failure_is_remembered_without_its_message(self):
         self.fail_with = UnicodeDecodeError("utf-8", b"\xffsecret", 0, 1, "bad")
-        get = {"op": "get", "refs": {"X": "op://v/item/field"}}
+        get = {"op": "get", "refs": {"X": "op-secret://v/item/field"}}
         error = self.raw(get)["error"]
         self.assertIn("UnicodeDecodeError", error)
         self.assertNotIn("secret", error)
@@ -441,34 +533,34 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
 
     def test_short_value_is_refused(self):
-        reply = self.raw({"op": "get", "refs": {"S": "op://v/item/short"}})
+        reply = self.raw({"op": "get", "refs": {"S": "op-secret://v/item/short"}})
         self.assertFalse(reply["ok"])
         self.assertIn("shorter than", reply["error"])
 
     def test_forget_drops_cached_value(self):
-        get = {"op": "get", "refs": {"X": "op://v/item/field"}}
+        get = {"op": "get", "refs": {"X": "op-secret://v/item/field"}}
         self.raw(get)
         self.assertTrue(
-            self.raw({"op": "forget", "ref": "op://v/item/field"})["forgotten"]
+            self.raw({"op": "forget", "ref": "op-secret://v/item/field"})["forgotten"]
         )
         self.raw(get)
         self.assertEqual(len(self.calls), 2)
 
     def test_check_hash_and_compare(self):
-        refs = {"X": "op://v/item/field"}
-        checks = self.raw({"op": "check", "refs": refs})["checks"]["X"]
+        refs = {"X": "op-secret://v/item/field"}
+        checks = self.raw({"op": "compare", "refs": refs})["checks"]["X"]
         self.assertEqual(checks["length"], 16)
         self.assertEqual(len(checks["scrypt"]), 32)
         self.assertNotIn("s3cret", json.dumps(checks))
-        same = self.raw({"op": "check", "refs": refs, "compare": "s3cret-value-123"})
-        other = self.raw({"op": "check", "refs": refs, "compare": "different-value"})
+        same = self.raw({"op": "compare", "refs": refs, "compare": "s3cret-value-123"})
+        other = self.raw({"op": "compare", "refs": refs, "compare": "different-value"})
         self.assertTrue(same["checks"]["X"]["matches"])
         self.assertFalse(other["checks"]["X"]["matches"])
 
     def test_run_masks_output_and_passes_env_and_exit_code(self):
         result = self.client(
             "run",
-            "X=op://v/item/field",
+            "X=op-secret://v/item/field",
             "--",
             "sh",
             "-c",
@@ -482,10 +574,86 @@ class HelperTest(unittest.TestCase):
 
     def test_check_stdin_from_client(self):
         result = self.client(
-            "check", "--stdin", "X=op://v/item/field", input="s3cret-value-123\n"
+            "compare",
+            "--stdin",
+            "X=op-secret://v/item/field",
+            input="s3cret-value-123\n",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("X: matches", result.stdout)
+
+    def test_held_reports_without_fetching(self):
+        held = {"op": "held", "refs": ["op-secret://v/item/field"]}
+        self.assertEqual(self.raw(held)["held"], {"op-secret://v/item/field": False})
+        self.raw({"op": "get", "refs": {"X": "op-secret://v/item/field"}})
+        self.assertEqual(self.raw(held)["held"], {"op-secret://v/item/field": True})
+        self.assertEqual(len(self.calls), 1)
+
+    def test_held_is_answered_outside_the_session_but_get_is_not(self):
+        with patch.object(op_secret, "is_descendant", return_value=False):
+            held = self.raw({"op": "held", "refs": ["op-secret://v/item/field"]})
+            get = self.raw({"op": "get", "refs": {"X": "op-secret://v/item/field"}})
+        self.assertTrue(held["ok"])
+        self.assertIn("not part of this Claude session", get["error"])
+        self.assertEqual(self.calls, [])
+
+    def test_check_command_never_fetches(self):
+        result = self.client("check", "X=op-secret://v/item/field")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("op-secret://v/item/field: not held", result.stdout)
+        self.raw({"op": "get", "refs": {"X": "op-secret://v/item/field"}})
+        result = self.client("check", "op-secret://v/item/field")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("held", result.stdout)
+        self.assertEqual(len(self.calls), 1)
+
+    def hook(self, command, tool="Bash"):
+        event = {
+            "session_id": self.session,
+            "tool_name": tool,
+            "tool_input": {"command": command},
+        }
+        env = dict(
+            os.environ, CLAUDE_CODE_SESSION_ID=self.session, CLAUDE_PID=str(os.getpid())
+        )
+        thread = self.serve()
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT_PATH), "hook"],
+            check=False,
+            env=env,
+            input=json.dumps(event),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        # The hook doesn't connect when it has nothing to ask; unblock the
+        # serve thread with one request of our own.
+        if thread.is_alive():
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.connect(self.helper.paths["sock"])
+                request = {"op": "held", "refs": [], "token": self.helper.token}
+                sock.sendall(json.dumps(request).encode() + b"\n")
+                sock.recv(65536)
+        thread.join()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout) if result.stdout else None
+
+    def test_hook_asks_for_a_secret_not_held_yet(self):
+        out = self.hook("op-secret run X=op-secret://v/item/field -- true")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
+        self.assertIn(
+            "op-secret://v/item/field",
+            out["hookSpecificOutput"]["permissionDecisionReason"],
+        )
+        self.assertEqual(self.calls, [])
+
+    def test_hook_stays_quiet_once_held_or_without_references(self):
+        self.raw({"op": "get", "refs": {"X": "op-secret://v/item/field"}})
+        self.assertIsNone(self.hook("op-secret run X=op-secret://v/item/field -- true"))
+        self.assertIsNone(self.hook("grep -r 'op://v/item/field' ."))
+        self.assertIsNone(
+            self.hook("op-secret run X=op-secret://v/other -- true", tool="Read")
+        )
 
     def test_second_helper_for_same_session_loses_the_lock(self):
         other = op_secret.Helper(self.session, os.getpid(), fetch=self.fake_fetch)
@@ -516,7 +684,7 @@ class HelperTest(unittest.TestCase):
                 sys.executable,
                 str(SCRIPT_PATH),
                 "run",
-                "X=op://v/item/field",
+                "X=op-secret://v/item/field",
                 "--",
                 "yes",
             ],
@@ -539,7 +707,12 @@ class HelperTest(unittest.TestCase):
     def test_run_does_not_wait_for_a_background_grandchild(self):
         start = time.monotonic()
         result = self.client(
-            "run", "X=op://v/item/field", "--", "sh", "-c", "sleep 8 & echo started"
+            "run",
+            "X=op-secret://v/item/field",
+            "--",
+            "sh",
+            "-c",
+            "sleep 8 & echo started",
         )
         self.assertLess(time.monotonic() - start, 6)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -639,16 +812,16 @@ class ReviewFixesTest(unittest.TestCase):
         log = Path(op_secret.helper_paths(session, 99999)["log"])
         events = [
             {"event": "start"},
-            {"event": "fetched", "refs": ["op://a/old/x"]},
+            {"event": "fetched", "refs": ["op-secret://a/old/x"]},
             {"event": "start"},
-            {"event": "fetched", "refs": ["op://a/new/y"]},
+            {"event": "fetched", "refs": ["op-secret://a/new/y"]},
         ]
         log.write_text("".join(json.dumps(e) + "\n" for e in events))
         try:
             entry = next(h for h in op_secret.helpers() if h["session"] == session)
         finally:
             log.unlink()
-        self.assertEqual(entry["held"], ["op://a/new/y"])
+        self.assertEqual(entry["held"], ["op-secret://a/new/y"])
 
     def test_runs_directly_through_its_shebang(self):
         result = subprocess.run(
