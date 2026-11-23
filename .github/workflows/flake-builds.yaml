@@ -69,17 +69,6 @@ jobs:
         name: claytono
         skipPush: true
 
-    - name: Start Tailscale SSH
-      # Temporary diagnostics for PR 39. Remove after the long-running Codex
-      # build is understood.
-      if: steps.changes.outputs.flake != 'false'
-      uses: claytono/github-actions/tailscale-ssh@ef5adfc30461da4e7f1aad700b1ddfd39b2dbd61
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_SSH_OAUTH_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_SSH_OAUTH_CLIENT_SECRET }}
-        hostname: dotfiles-flake-${{ github.run_id }}-${{ github.run_attempt }}
-        mode: background
-
     - name: Add extra swap
       if: steps.changes.outputs.flake != 'false' && matrix.extra-swap-size-gb != ''
       run: |
