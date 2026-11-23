@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Runs on herdr's worktree.created event. herdr runs event hooks in the
+# background with no terminal, while the new workspace's first pane is still
+# starting its shell, so the hook only hands off: it types setup-worktree into
+# that pane, where it can ask questions and then starts Claude.
+#
+# herdr types the command as keystrokes. A worktree created from the UI opens
+# focused, so anything typed into the pane before the command arrives ends up
+# on the same line; re-run the setup-worktree command shown if that happens.
+
+set -euo pipefail
+
+herdr=${HERDR_BIN_PATH:-herdr}
+event=${HERDR_PLUGIN_EVENT_JSON:-}
+worktree=$(jq -r '.data.worktree.path // empty' <<<"$event")
+label=$(jq -r '.data.workspace.label // empty' <<<"$event")
+# herdr runs the hook with the new workspace's first pane as HERDR_PANE_ID.
+pane=${HERDR_PANE_ID:-}
+[[ -n $worktree && -d $worktree && -n $pane ]] || exit 0
+
+command=$(printf '%q %q' "$HERDR_PLUGIN_ROOT/setup-worktree" "$worktree")
+
+# A worktree with an .envrc loads its Nix direnv shell before the first
+# prompt. nix-direnv caches per directory, so a new worktree builds its cache
+# from scratch, which can take many minutes.
+timeout_ms=60000
+if [[ -f $worktree/.envrc ]]; then
+  timeout_ms=1200000
+fi
+if ! "$herdr" pane wait-output "$pane" --regex '\$ *$' --source recent-unwrapped \
+  --timeout "$timeout_ms" >/dev/null; then
+  "$herdr" notification show "worktree setup" \
+    --body "${label:-$worktree}: the shell didn't reach a prompt. Run by hand: $command" >/dev/null
+  echo "no prompt in $pane within $((timeout_ms / 60000)) minutes; not typing setup-worktree" >&2
+  exit 1
+fi
+
+"$herdr" pane run "$pane" "$command"

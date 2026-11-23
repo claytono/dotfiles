@@ -23,7 +23,7 @@ in {
   # register them here. Linking an already-linked path is a no-op.
   home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     run ${pkgs.herdr}/bin/herdr plugin link \
-      "${config.home.homeDirectory}/src/dotfiles/config/herdr/plugins/direnv-worktree-allow" >/dev/null
+      "${config.home.homeDirectory}/src/dotfiles/config/herdr/plugins/worktree-setup" >/dev/null
   '';
 
   # Build Herdr.app and install it only when its code signature changes, so

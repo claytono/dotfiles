@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# Typed into a new worktree's first pane by worktree-created.hook. Running in
+# the pane rather than in the hook gives it a terminal, so it can ask.
+#
+# Brings the worktree up to date with upstream, gets its .envrc approved, runs
+# the repo's own scripts/herdr-worktree-setup if it has one, then starts
+# Claude. The pane's shell loaded .envrc before any of this ran, so the last
+# two steps load it fresh through direnv exec.
+
+set -uo pipefail
+
+worktree=$1
+cd "$worktree" || exit 1
+main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+use_envrc=false
+approved_here=false
+
+ask() {
+  local reply
+  read -r -p "$1 [y/N] " reply
+  [[ $reply == [yY]* ]]
+}
+
+# The herdr UI, and herdr worktree create without --base, branch from
+# wherever the main checkout is, which is often behind upstream; git records
+# that as "branch: Created from HEAD" in the branch's first reflog entry. If
+# the new branch was made that way and has no commits of its own,
+# fast-forward it to the latest upstream default branch. A worktree given an
+# explicit base, old or new, and a detached HEAD are left where they are.
+catch_up_to_upstream() {
+  local branch created upstream
+
+  branch=$(git branch --show-current)
+  if [[ -z $branch ]]; then
+    return 0 # detached HEAD
+  fi
+  created=$(git reflog show --format=%gs "refs/heads/$branch" | tail -n 1)
+  if [[ $created != "branch: Created from HEAD" ]]; then
+    return 0
+  fi
+  if ! git fetch --quiet origin; then
+    echo "Fetch failed; staying at $(git rev-parse --short HEAD)." >&2
+    return 0
+  fi
+
+  # origin/HEAD names the remote's default branch when git recorded it at
+  # clone time.
+  upstream=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD) ||
+    upstream=origin/main
+
+  # HEAD is an ancestor of upstream exactly when every commit on the branch
+  # is already in upstream, so moving the branch loses nothing.
+  if ! git merge-base --is-ancestor HEAD "$upstream"; then
+    return 0
+  fi
+  if git merge --ff-only --quiet "$upstream"; then
+    echo "$branch is at $upstream: $(git log -1 --format='%h %s')"
+  fi
+}
+
+# True when direnv has approved the current contents of $1/.envrc.
+envrc_allowed() {
+  (cd "$1" && direnv status --json) |
+    jq -e --arg rc "$1/.envrc" \
+      '.state.foundRC | .path == $rc and (.allowed | tostring) == "0"' >/dev/null
+}
+
+# direnv approves each .envrc by path, so a new worktree's starts out blocked.
+# Approve it without asking when it is identical to the main checkout's
+# approved copy; otherwise show what differs and ask.
+approve_envrc() {
+  if [[ ! -f .envrc ]] || ! command -v direnv >/dev/null || envrc_allowed "$worktree"; then
+    return 0
+  fi
+
+  if [[ -n $main && $main != "$worktree" ]] && cmp -s "$main/.envrc" .envrc &&
+    envrc_allowed "$main"; then
+    direnv allow .
+    approved_here=true
+    return 0
+  fi
+
+  if [[ -n $main && $main != "$worktree" && -f $main/.envrc ]]; then
+    echo "This worktree's .envrc differs from $main/.envrc:"
+    git --no-pager diff --no-index -- "$main/.envrc" .envrc
+  else
+    echo "direnv has not approved .envrc:"
+    cat .envrc
+  fi
+  if ask "Allow it?"; then
+    direnv allow .
+    approved_here=true
+  else
+    echo "Leaving .envrc blocked."
+  fi
+}
+
+# Decide whether the last two steps load .envrc. An .envrc can declare
+#   # envrc-ready: <command that exits 0 when loading will not prompt>
+# as infra's does for its 1Password-held key; the herdr wrapper reads the same
+# line. Ask before a load that would prompt.
+choose_envrc() {
+  local ready
+
+  if [[ ! -f .envrc ]] || ! command -v direnv >/dev/null || ! envrc_allowed "$worktree"; then
+    return 0
+  fi
+  ready=$(sed -n 's/^# envrc-ready: //p' .envrc | head -n 1)
+  if [[ -n $ready ]] && ! bash -c "$ready" >/dev/null 2>&1 &&
+    ! ask "Loading .envrc will ask 1Password for your fingerprint. Continue?"; then
+    echo "Continuing without .envrc."
+    # The shell's own direnv hook would load an approved .envrc at its next
+    # prompt, after Claude exits, and ask 1Password then. Take back an
+    # approval this run gave; an earlier one was the user's own decision.
+    if [[ $approved_here == true ]]; then
+      direnv deny .
+      echo "Blocked .envrc again; run direnv allow when you want it loaded."
+    fi
+    return 0
+  fi
+  use_envrc=true
+}
+
+# Run "$@" with the worktree's .envrc loaded if choose_envrc chose to. The
+# repo's setup can read WORKTREE_SETUP_ENVRC_LOADED to tell whether its tools
+# are on PATH.
+with_envrc() {
+  if [[ $use_envrc == true ]]; then
+    WORKTREE_SETUP_ENVRC_LOADED=1 direnv exec . "$@"
+  else
+    "$@"
+  fi
+}
+
+run_repo_setup() {
+  if [[ ! -x scripts/herdr-worktree-setup ]]; then
+    return 0
+  fi
+  if ! with_envrc scripts/herdr-worktree-setup; then
+    echo "scripts/herdr-worktree-setup failed; not starting Claude." >&2
+    return 1
+  fi
+}
+
+catch_up_to_upstream
+approve_envrc
+choose_envrc
+run_repo_setup || exit 1
+with_envrc claude
