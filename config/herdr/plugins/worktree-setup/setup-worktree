@@ -65,33 +65,90 @@ envrc_allowed() {
       '.state.foundRC | .path == $rc and (.allowed | tostring) == "0"' >/dev/null
 }
 
-# direnv approves each .envrc by path, so a new worktree's starts out blocked.
-# Approve it without asking when it is identical to the main checkout's
-# approved copy; otherwise show what differs and ask.
+# True when there is a main checkout, other than this worktree, with an
+# .envrc.
+has_main_envrc() {
+  [[ -n $main && $main != "$worktree" && -f $main/.envrc ]]
+}
+
+# direnv approves each .envrc by path and contents, so a new worktree's
+# starts out blocked, and the main checkout's goes back to blocked whenever
+# an update changes it. Approve the worktree's without asking when it is
+# identical to the main checkout's approved copy. When it is identical but
+# the main checkout's copy is blocked too, show the change that blocked it
+# and offer to allow both; when it differs, show the difference and ask.
 approve_envrc() {
+  local change
+
   if [[ ! -f .envrc ]] || ! command -v direnv >/dev/null || envrc_allowed "$worktree"; then
     return 0
   fi
 
-  if [[ -n $main && $main != "$worktree" ]] && cmp -s "$main/.envrc" .envrc &&
-    envrc_allowed "$main"; then
+  if ! has_main_envrc; then
+    echo "direnv has not approved .envrc:"
+    cat .envrc
+    if ask "Allow it?"; then
+      direnv allow .
+      approved_here=true
+    else
+      echo "Leaving .envrc blocked."
+    fi
+    return 0
+  fi
+
+  if ! cmp -s "$main/.envrc" .envrc; then
+    echo "This worktree's .envrc differs from $main/.envrc:"
+    git --no-pager diff --no-index -- "$main/.envrc" .envrc
+    if ask "Allow this worktree's .envrc?"; then
+      direnv allow .
+      approved_here=true
+    else
+      echo "Leaving .envrc blocked."
+    fi
+    return 0
+  fi
+
+  if envrc_allowed "$main"; then
     direnv allow .
     approved_here=true
     return 0
   fi
 
-  if [[ -n $main && $main != "$worktree" && -f $main/.envrc ]]; then
-    echo "This worktree's .envrc differs from $main/.envrc:"
-    git --no-pager diff --no-index -- "$main/.envrc" .envrc
+  echo "This worktree's .envrc is the same as $main/.envrc, but direnv has"
+  echo "not approved that one since it last changed."
+  change=$(git -C "$main" log -1 --format=%h -- .envrc)
+  if [[ -n $change ]]; then
+    echo "It last changed in $(git -C "$main" log -1 --format='%h %s' "$change"):"
+    git -C "$main" --no-pager show --format= "$change" -- .envrc
   else
-    echo "direnv has not approved .envrc:"
     cat .envrc
   fi
-  if ask "Allow it?"; then
+  if ask "Allow it in both $main and this worktree?"; then
+    if ! direnv allow "$main"; then
+      echo "Couldn't allow $main/.envrc; the next worktree will ask again." >&2
+    fi
     direnv allow .
     approved_here=true
   else
-    echo "Leaving .envrc blocked."
+    echo "Leaving both blocked."
+  fi
+}
+
+# The repo's own setup can update the main checkout (infra's fast-forwards it
+# to origin/main), which blocks its .envrc again when the update changes it.
+# When the main checkout's copy is blocked but now identical to this
+# worktree's approved one, allow it too: those are the contents just
+# approved here.
+approve_main_envrc() {
+  if ! has_main_envrc || ! command -v direnv >/dev/null ||
+    ! envrc_allowed "$worktree" || envrc_allowed "$main" ||
+    ! cmp -s "$main/.envrc" .envrc; then
+    return 0
+  fi
+  if direnv allow "$main"; then
+    echo "Allowed $main/.envrc, which now matches this worktree's."
+  else
+    echo "Couldn't allow $main/.envrc; the next worktree will ask again." >&2
   fi
 }
 
@@ -146,4 +203,5 @@ catch_up_to_upstream
 approve_envrc
 choose_envrc
 run_repo_setup || exit 1
+approve_main_envrc
 with_envrc claude
