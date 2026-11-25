@@ -118,7 +118,9 @@ def is_due(
     if today_weekday != assigned:
         return False
     elapsed = current_time - parse_iso(last_success)
-    return elapsed >= timedelta(days=GC_INTERVAL_DAYS)
+    # The weekday check already limits each repo to one run a week. A day of
+    # slack keeps start-time jitter and DST shifts from skipping a week.
+    return elapsed >= timedelta(days=GC_INTERVAL_DAYS - 1)
 
 
 def run_gc(repo: Path) -> tuple[bool, str]:
